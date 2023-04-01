@@ -2,7 +2,11 @@ import json
 import aiohttp
 from config import cmc_key
 from helper.tokenPair import TokenPair
-
+headers = {
+            'Accepts': 'application/json',
+            'Accept-Encoding': 'deflate, gzip',
+            'X-CMC_PRO_API_KEY': cmc_key
+        }
 async def get_token_pairs(token):
     try:
         dex_url = "https://api.dexscreener.io/latest/dex/tokens/"+token
@@ -17,12 +21,19 @@ async def get_token_pairs(token):
 
 async def cryptocurrency_info(token):
     try:
-        headers = {
-            'Accepts': 'application/json',
-            'Accept-Encoding': 'deflate, gzip',
-            'X-CMC_PRO_API_KEY': cmc_key
-        }
         coinmarketcap_url = "https://pro-api.coinmarketcap.com/v2/cryptocurrency/info?address="+token
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.get(coinmarketcap_url) as response:
+                result = await response.text()
+                result_array = json.loads(result)
+                return result_array['data']
+    except:
+        return None
+    
+async def cryptocurrency_info_ids(ids):
+    try:
+        ids = str(ids).replace("[", "").replace("]", "").replace(" ", "")
+        coinmarketcap_url = "https://pro-api.coinmarketcap.com/v2/cryptocurrency/info?id="+ids
         async with aiohttp.ClientSession(headers=headers) as session:
             async with session.get(coinmarketcap_url) as response:
                 result = await response.text()

@@ -2,13 +2,16 @@ from operator import attrgetter
 from datetime import datetime, timedelta
 from sqlalchemy import desc
 from config import Session
-from model.tables import Project
+from model.tables import Project, Pair
 from helper.shill import Shill
 from helper import (
     format_number_string,
     current_marketcap,
-    return_percent
+    return_percent,
+    get_token_pairs,
+    dex_coin_array
 )
+from api import cryptocurrency_info_ids
 import asyncio
 import time
 from helper.emoji import emojis
@@ -16,24 +19,64 @@ from helper.emoji import emojis
 db = Session()
 user_shills_status = []
 
-emoji_array = {1: "🚀", 2: "✈", 3: "🚁", 4: "🏎", 5: "🚗", 6: "🏍", 7: "🚲", 8: "🏃‍♂️", 9: "🚶‍♂️", 10: "👨‍🦽"}
+async def update_token():
+    all_pairs = db.query(Pair).all()
+    dex_coin_results = dex_coin_array(all_pairs)
+    dex_array = dex_coin_results['dex_array']
+    coin_array = dex_coin_results['coin_array']
 
-async def all_time():
+    dex_results = []
+    marketcap_results = []
+
+    for token_list in dex_array:
+        list_result = await get_token_pairs(token_list)
+        dex_results += list_result
+
+    for coin_market_id in coin_array:
+        cap_result = await cryptocurrency_info_ids(coin_market_id)
+        if cap_result != None:
+            for single_key in cap_result:
+                marketcap_results.append(cap_result[single_key])
+
+
+    for pair in all_pairs:
+        liquidities = [single_dex for single_dex in dex_results if single_dex.base_token.address.lower() == pair.token.lower()]
+        market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair.coin_market_id]
+
+        if len(liquidities)>0:
+            liquidity = max(liquidities, key=attrgetter('liquidity.usd'))
+            circulating_supply = None
+            now_marketcap = liquidity.fdv
+            if len(market_info)>0:
+                circulating_supply = market_info[0]['self_reported_circulating_supply']
+            
+            if circulating_supply != None:
+                now_marketcap = circulating_supply*liquidity.price_usd
+            
+            pair.marketcap = str(now_marketcap)
+            pair.updated_at = datetime.now()
+            db.commit()
+        else:
+            print("----------need to add user ban part--------------")
+    
+    return "success"
+
+def all_time():
     global user_shills_status
     all_shills = db.query(Project).order_by(desc(Project.created_at)).all()
     user_lists = []
-    timestamp = time.time()
-    updated_time = datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y %H:%M')
     result_text = "TOP 10 SHILLS OF ALL TIME\n\n"
     for project in all_shills:
         if not project.username in user_lists:
             user_lists.append(project.username)
         
-        current_info = await current_marketcap(project)
-        if float(current_info['marketcap'])>float(project.ath_value):
-            project.ath_value = current_info['marketcap']
-            db.commit()
-        if current_info['is_liquidity']:
+        current_info = db.query(Pair).filter(Pair.token == project.token).first()
+        
+        if current_info != None:
+            if float(current_info.marketcap)>float(project.ath_value):
+                project.ath_value = current_info.marketcap
+                db.commit()
+
             shill_detail = {
                 "username": project.username,
                 "token": project.token,
@@ -42,12 +85,13 @@ async def all_time():
                 "marketcap": str(project.marketcap),
                 "ath": str(project.ath_value),
                 "created_at": str(project.created_at),
-                "current_marketcap": current_info['marketcap'],
-                "percent": current_info['percent']
+                "current_marketcap": current_info.marketcap,
+                "percent": return_percent(current_info.marketcap, project.marketcap)
             }
             user_shills_status.append(shill_detail)
-    
+
     user_shills_status = [Shill.parse_obj(single_user_shill) for single_user_shill in user_shills_status]
+    
     shill_details = []
 
     for username in user_lists:

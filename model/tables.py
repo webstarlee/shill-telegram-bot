@@ -20,16 +20,15 @@ class Project(Base):
         return "<Project %r>" % self.username
 
 class Pair(Base):
-    __tablename__ = "projects"
+    __tablename__ = "pairs"
 
     id = Column(Integer, primary_key=True)
-    username = Column(String)
     token = Column(String)
-    url = Column(String)
-    token_symbol = Column(String)
+    symbol = Column(String)
+    pair_url = Column(String)
     marketcap = Column(String)
-    ath_value = Column(String)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    coin_market_id = Column(Integer)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
-        return "<Project %r>" % self.username
+        return "<Pair %r>" % self.token

@@ -1,7 +1,8 @@
 from operator import attrgetter
+from datetime import datetime
 from sqlalchemy import desc
 from config import Session
-from model.tables import Project
+from model.tables import Project, Pair
 from helper import (
     format_number_string,
     return_percent,
@@ -10,6 +11,7 @@ from helper import (
     cryptocurrency_info
 )
 from helper.emoji import emojis
+import time
 
 db = Session()
 
@@ -23,25 +25,44 @@ async def user_shillmaster(token, username):
             marketcap_info = await cryptocurrency_info(token)
             circulating_supply = 0
             marketcap = pair.fdv
+            coin_marketcap_id = None
             if marketcap_info != None:
                 for key in marketcap_info:
                     currency_info = marketcap_info[key]
+                    coin_marketcap_id=currency_info['id']
                     if currency_info['self_reported_circulating_supply'] != None:
                         circulating_supply = currency_info['self_reported_circulating_supply']
 
             if circulating_supply != 0:
                 marketcap = circulating_supply*pair.price_usd
             
-            token_pair = db.query(Project).filter(Project.username == username).filter(Project.token == token).first()
-            if token_pair != None:
-                if float(marketcap)>float(token_pair.ath_value):
-                    token_pair.ath_value = str(marketcap)
+            pair_project = db.query(Project).filter(Project.username == username).filter(Project.token == token).first()
+            pair_token = db.query(Pair).filter(Pair.token == token).first()
+            if pair_token != None:
+
+                pair_token.marketcap = str(marketcap)
+                pair_token.updated_at = datetime.now()
+                db.commit()
+            else:
+                pair_token = Pair(
+                    token=token,
+                    symbol=pair.base_token.symbol,
+                    pair_url=pair.url,
+                    marketcap=str(marketcap),
+                    coin_market_id=coin_marketcap_id
+                )
+                db.add(pair_token)
+                db.commit()
+
+            if pair_project != None:
+                if float(marketcap)>float(pair_project.ath_value):
+                    pair_project.ath_value = str(marketcap)
                     db.commit()
-                marketcap_percent = marketcap/float(token_pair.marketcap)
-                bot_txt = emojis['dizzy']+" ["+token_pair.token_symbol+"]("+pair.url+") Already Shared marketcap: $"+format_number_string(token_pair.marketcap)+"\n"
+                marketcap_percent = marketcap/float(pair_project.marketcap)
+                bot_txt = emojis['dizzy']+" ["+pair_project.token_symbol+"]("+pair.url+") Already Shared marketcap: $"+format_number_string(pair_project.marketcap)+"\n"
                 bot_txt += emojis['point_right']+" Currently: $"+format_number_string(marketcap)+" ("+str(round(marketcap_percent, 2))+"x)\n"
-                if float(marketcap)< float(token_pair.ath_value):
-                    bot_txt += emojis['point_right']+" ATH: $"+format_number_string(token_pair.ath_value)+" ("+return_percent(token_pair.ath_value, token_pair.marketcap)+"x)\n"
+                if float(marketcap)< float(pair_project.ath_value):
+                    bot_txt += emojis['point_right']+" ATH: $"+format_number_string(pair_project.ath_value)+" ("+return_percent(pair_project.ath_value, pair_project.marketcap)+"x)\n"
                 bot_txt += "\n"
             else:
                 project = Project(

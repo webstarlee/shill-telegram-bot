@@ -1,7 +1,6 @@
 from operator import attrgetter
 from api import get_token_pairs, cryptocurrency_info
 
-
 def format_number_string(number):
     number = float(number)
     final_number = "{:,}".format(int(number))
@@ -36,3 +35,33 @@ async def current_marketcap(project):
             return {"is_liquidity":False}
     except:
         return {"is_liquidity":False}
+
+def dex_coin_array(pairs):
+    dex_part_array = []
+    coin_market_ids = []
+    dex_part = ''
+    coin_market_part = []
+    index = 1
+    for pair in pairs:
+        if dex_part == '':
+            dex_part = pair.token
+        else:
+            dex_part += ","+pair.token
+
+        if pair.coin_market_id != None:
+            print(pair.coin_market_id)
+            coin_market_part.append(pair.coin_market_id)
+        
+        if index%20 == 0:
+            dex_part_array.append(dex_part)
+            dex_part = ''
+            coin_market_ids.append(coin_market_part)
+            coin_market_part = []
+        elif index == len(pairs):
+            dex_part_array.append(dex_part)
+            dex_part = ''
+            coin_market_ids.append(coin_market_part)
+            coin_market_part = None
+        index+=1
+    
+    return {"dex_array": dex_part_array, "coin_array": coin_market_ids}
