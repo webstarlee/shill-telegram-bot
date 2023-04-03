@@ -15,8 +15,14 @@ import os
 
 application = ApplicationBuilder().token(bot_token).build()
 group_id = ""
+leaderboard_message_alltime_id = ""
+leaderboard_message_twoweek_id = ""
+leaderboard_message_oneweek_id = ""
 
 async def leaderboard_update():
+    global leaderboard_message_alltime_id
+    global leaderboard_message_twoweek_id
+    global leaderboard_message_oneweek_id
     while True:
         black_list = await update_token()
         if len(black_list)>0:
@@ -31,9 +37,49 @@ async def leaderboard_update():
             [InlineKeyboardButton(text=emojis['bangbang']+emojis['dog']+" SHILL ON GRIMACE GROUP "+emojis['dog']+emojis['bangbang'], url="https://t.me/sh13shilBot")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await application.bot.edit_message_text(chat_id=leaderboard_id, message_id=3, text=all_text, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
-        await application.bot.edit_message_text(chat_id=leaderboard_id, message_id=4, text=two_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
-        await application.bot.edit_message_text(chat_id=leaderboard_id, message_id=5, text=one_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
+        
+        if leaderboard_message_alltime_id == "":
+            result = await application.bot.send_message(chat_id=leaderboard_id, text=all_text, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
+            leaderboard_message_alltime_id = result['message_id']
+            print("alltime: ", leaderboard_message_alltime_id)
+        else:
+            await application.bot.edit_message_text(
+                chat_id=leaderboard_id,
+                message_id=leaderboard_message_alltime_id,
+                text=all_text,
+                disable_web_page_preview=True,
+                reply_markup=reply_markup,
+                parse_mode='MARKDOWN'
+            )
+        
+        if leaderboard_message_twoweek_id == "":
+            result = await application.bot.send_message(chat_id=leaderboard_id, text=two_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
+            leaderboard_message_twoweek_id = result['message_id']
+            print("twoweek: ", leaderboard_message_twoweek_id)
+        else:
+            await application.bot.edit_message_text(
+                chat_id=leaderboard_id,
+                message_id=leaderboard_message_twoweek_id,
+                text=two_week,
+                disable_web_page_preview=True,
+                reply_markup=reply_markup,
+                parse_mode='MARKDOWN'
+            )
+        
+        if leaderboard_message_oneweek_id == "":
+            result = await application.bot.send_message(chat_id=leaderboard_id, text=one_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
+            leaderboard_message_oneweek_id = result['message_id']
+            print("oneweek: ", leaderboard_message_oneweek_id)
+        else:
+            await application.bot.edit_message_text(
+                chat_id=leaderboard_id,
+                message_id=leaderboard_message_oneweek_id,
+                text=one_week,
+                disable_web_page_preview=True,
+                reply_markup=reply_markup,
+                parse_mode='MARKDOWN'
+            )
+            
         await asyncio.sleep(600)
 
 async def start(update, context):
