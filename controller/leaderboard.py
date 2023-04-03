@@ -1,8 +1,8 @@
 from operator import attrgetter
 from datetime import datetime, timedelta
 from sqlalchemy import desc
-from config import Session
-from model.tables import Project, Pair
+from config import Session, inspector, engine
+from model.tables import Project, Pair, Base
 from helper.shill import Shill
 from helper import (
     format_number_string,
@@ -18,7 +18,14 @@ from helper.emoji import emojis
 db = Session()
 user_shills_status = []
 
+def check_table_exist():
+    table_names = inspector.get_table_names()
+    if not "pairs" in table_names:
+        Base.metadata.create_all(engine)
+        print("Table Created")
+
 async def update_token():
+    check_table_exist()
     black_list=[] #user list for block from group
     all_pairs = db.query(Pair).all()
     dex_coin_results = dex_coin_array(all_pairs)
