@@ -7,7 +7,6 @@ helper/__pycache__/
 model/__pycache__/
 *.py[cod]
 *$py.class
-config/database.db
 
 # C extensions
 *.so
