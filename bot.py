@@ -14,13 +14,15 @@ import shutil
 import os
 
 application = ApplicationBuilder().token(bot_token).build()
+group_id = ""
 
 async def leaderboard_update():
     while True:
         black_list = await update_token()
         if len(black_list)>0:
             for user_id in black_list:
-                await application.bot.ban_chat_member(chat_id=group_id, user_id=user_id)
+                if group_id != "":
+                    await application.bot.ban_chat_member(chat_id=group_id, user_id=user_id)
         global_reset()
         all_text = all_time()
         two_week = past_week(14)
@@ -86,6 +88,7 @@ def sepatate_command(text):
     return {'command':command, 'param': param}
 
 async def shil_command(update, context):
+    global group_id
     receive_text = update.message.text
     receive_text = receive_text.replace('/', '')
     command_param = sepatate_command(receive_text)
@@ -103,7 +106,7 @@ async def shil_command(update, context):
             payload_txt = await get_user_shillmaster(param)
         diable_preview = True
     chat_id = update.effective_chat.id
-
+    group_id = update.effective_chat.id
     await context.bot.send_message(chat_id=chat_id, text=payload_txt, disable_web_page_preview=diable_preview, parse_mode='MARKDOWN')
 
 loop = asyncio.get_event_loop()
