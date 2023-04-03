@@ -43,7 +43,6 @@ async def leaderboard_update():
                 chat_id=leaderboard_id,
                 text=all_text,
                 disable_web_page_preview=True,
-                reply_markup=reply_markup,
                 parse_mode='MARKDOWN'
             )
             leaderboard_message_alltime_id = result['message_id']
@@ -54,7 +53,6 @@ async def leaderboard_update():
                 message_id=leaderboard_message_alltime_id,
                 text=all_text,
                 disable_web_page_preview=True,
-                reply_markup=reply_markup,
                 parse_mode='MARKDOWN'
             )
         
@@ -63,7 +61,6 @@ async def leaderboard_update():
                 chat_id=leaderboard_id,
                 text=two_week,
                 disable_web_page_preview=True,
-                reply_markup=reply_markup,
                 parse_mode='MARKDOWN'
                 )
             leaderboard_message_twoweek_id = result['message_id']
@@ -74,7 +71,6 @@ async def leaderboard_update():
                 message_id=leaderboard_message_twoweek_id,
                 text=two_week,
                 disable_web_page_preview=True,
-                reply_markup=reply_markup,
                 parse_mode='MARKDOWN'
             )
         
@@ -83,7 +79,6 @@ async def leaderboard_update():
                 chat_id=leaderboard_id,
                 text=one_week,
                 disable_web_page_preview=True,
-                reply_markup=reply_markup,
                 parse_mode='MARKDOWN'
             )
             leaderboard_message_oneweek_id = result['message_id']
@@ -94,7 +89,6 @@ async def leaderboard_update():
                 message_id=leaderboard_message_oneweek_id,
                 text=one_week,
                 disable_web_page_preview=True,
-                reply_markup=reply_markup,
                 parse_mode='MARKDOWN'
             )
 
