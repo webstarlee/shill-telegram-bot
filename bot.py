@@ -92,7 +92,7 @@ async def leaderboard_update():
                 parse_mode='MARKDOWN'
             )
 
-        await asyncio.sleep(60)
+        await asyncio.sleep(600)
 
 async def leaderboard_shill_update(text):
     await application.bot.send_message(
