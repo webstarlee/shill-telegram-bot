@@ -29,9 +29,9 @@ async def leaderboard_update():
             [InlineKeyboardButton(text=emojis['bangbang']+emojis['dog']+" SHILL ON GRIMACE GROUP "+emojis['dog']+emojis['bangbang'], url="https://t.me/sh13shilBot")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await application.bot.edit_message_text(chat_id=leaderboard_id, message_id=2, text=all_text, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
-        await application.bot.edit_message_text(chat_id=leaderboard_id, message_id=9, text=two_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
-        await application.bot.edit_message_text(chat_id=leaderboard_id, message_id=10, text=one_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
+        await application.bot.edit_message_text(chat_id=leaderboard_id, message_id=3, text=all_text, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
+        await application.bot.edit_message_text(chat_id=leaderboard_id, message_id=4, text=two_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
+        await application.bot.edit_message_text(chat_id=leaderboard_id, message_id=5, text=one_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
         await asyncio.sleep(600)
 
 async def start(update, context):
