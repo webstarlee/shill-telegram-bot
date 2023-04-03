@@ -104,7 +104,6 @@ async def leaderboard_shill_update(text):
     await application.bot.send_message(
         chat_id=leaderboard_id,
         text=text,
-        disable_web_page_preview=True,
         parse_mode='MARKDOWN'
     )
 
