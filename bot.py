@@ -7,7 +7,7 @@ from telegram.ext import (
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from controller.shillmaster import user_shillmaster, get_user_shillmaster, clear_database
 from controller.leaderboard import all_time, past_week, global_reset, update_token
-from config import bot_token, group_id, leaderboard_id
+from config import bot_token, leaderboard_id
 from helper.emoji import emojis
 import asyncio
 import shutil
