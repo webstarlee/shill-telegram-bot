@@ -7,5 +7,5 @@ engine = create_engine("sqlite:///" + os.path.join(basedir, "database.db"), echo
 Session = sessionmaker(bind=engine)
 bot_token = "5980518310:AAH59J2CU_roxuHRfArHzq3HTuB_Dlymp-4"
 group_id = "-1001657559973"
-leaderboard_id = "-1001894150735"
+leaderboard_id = "-1001964784230"
 cmc_key = "e8456919-e960-45bf-865c-96d04f767c7c"
