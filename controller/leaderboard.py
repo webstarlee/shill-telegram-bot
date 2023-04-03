@@ -13,13 +13,13 @@ from helper import (
 )
 from api import cryptocurrency_info_ids
 import asyncio
-import time
 from helper.emoji import emojis
 
 db = Session()
 user_shills_status = []
 
 async def update_token():
+    black_list=[] #user list for block from group
     all_pairs = db.query(Pair).all()
     dex_coin_results = dex_coin_array(all_pairs)
     dex_array = dex_coin_results['dex_array']
@@ -57,9 +57,19 @@ async def update_token():
             pair.updated_at = datetime.now()
             db.commit()
         else:
-            print("----------need to add user ban part--------------")
+            # Get User list to kick from Group
+            past_thirty_min = datetime.utcnow() - timedelta(minutes=30)
+            projects = db.query(Project).filter(Project.token == pair.token).filter(Project.created_at >= past_thirty_min).all()
+            black_list = []
+            if projects != None:
+                for project in projects:
+                    black_list.append(project.user_id)
+                    db.delete(project)
+                    db.commit()
+            db.delete(pair)
+            db.commit()
     
-    return "success"
+    return black_list
 
 def all_time():
     global user_shills_status
@@ -127,10 +137,7 @@ def all_time():
     return result_text
 
 def past_week(week):
-    timestamp = time.time()
-    now_time = datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y %H:%M:%S')
-    now_time_strp = datetime.strptime(now_time, "%d/%m/%Y %H:%M:%S")
-    past_two_week_date = now_time_strp - timedelta(days=week)
+    past_two_week_date = datetime.utcnow() - timedelta(days=week)
     all_shills = db.query(Project).filter(Project.created_at >= past_two_week_date).order_by(desc(Project.created_at)).all()
     past_user_shills_status = []
     user_lists = []

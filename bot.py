@@ -7,7 +7,7 @@ from telegram.ext import (
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from controller.shillmaster import user_shillmaster, get_user_shillmaster
 from controller.leaderboard import all_time, past_week, global_reset, update_token
-from config import bot_token
+from config import bot_token, group_id, leaderboard_id
 from helper.emoji import emojis
 import asyncio
 
@@ -15,7 +15,10 @@ application = ApplicationBuilder().token(bot_token).build()
 
 async def leaderboard_update():
     while True:
-        await update_token()
+        black_list = await update_token()
+        if len(black_list)>0:
+            for user_id in black_list:
+                await application.bot.ban_chat_member(chat_id=group_id, user_id=user_id)
         global_reset()
         all_text = all_time()
         two_week = past_week(14)
@@ -24,9 +27,9 @@ async def leaderboard_update():
             [InlineKeyboardButton(text=emojis['bangbang']+emojis['dog']+" SHILL ON GRIMACE GROUP "+emojis['dog']+emojis['bangbang'], url="https://t.me/sh13shilBot")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await application.bot.edit_message_text(chat_id=-1001894150735, message_id=2, text=all_text, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
-        await application.bot.edit_message_text(chat_id=-1001894150735, message_id=9, text=two_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
-        await application.bot.edit_message_text(chat_id=-1001894150735, message_id=10, text=one_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
+        await application.bot.edit_message_text(chat_id=leaderboard_id, message_id=2, text=all_text, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
+        await application.bot.edit_message_text(chat_id=leaderboard_id, message_id=9, text=two_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
+        await application.bot.edit_message_text(chat_id=leaderboard_id, message_id=10, text=one_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
         await asyncio.sleep(600)
 
 async def start(update, context):
@@ -53,10 +56,11 @@ async def shil_command(update, context):
     command = command_param['command']
     param = command_param['param']
     username = update.effective_user.username
+    user_id = update.effective_user.id
     payload_txt = ""
     diable_preview = False
     if command == 'shill':
-        payload_txt = await user_shillmaster(param, username)
+        payload_txt = await user_shillmaster(param, username, user_id)
     elif command == 'shillmaster':
         payload_txt = emojis['warning']+" Please specify username like below.\n/shillmaster@username\n"
         if param != '':

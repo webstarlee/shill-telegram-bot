@@ -9,6 +9,7 @@ class Project(Base):
 
     id = Column(Integer, primary_key=True)
     username = Column(String)
+    user_id = Column(Integer)
     token = Column(String)
     url = Column(String)
     token_symbol = Column(String)

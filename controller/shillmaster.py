@@ -15,7 +15,7 @@ import time
 
 db = Session()
 
-async def user_shillmaster(token, username):
+async def user_shillmaster(token, username, user_id):
     try:
         pairs = await get_token_pairs(token)
         filtered_pairs = [pair for pair in pairs if pair.base_token.address.lower() == token.lower()]
@@ -67,6 +67,7 @@ async def user_shillmaster(token, username):
             else:
                 project = Project(
                     username=username,
+                    user_id=user_id,
                     url=pair.url,
                     token=token,
                     token_symbol=pair.base_token.symbol,
