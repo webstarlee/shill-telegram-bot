@@ -39,7 +39,13 @@ async def leaderboard_update():
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         if leaderboard_message_alltime_id == "":
-            result = await application.bot.send_message(chat_id=leaderboard_id, text=all_text, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
+            result = await application.bot.send_message(
+                chat_id=leaderboard_id,
+                text=all_text,
+                disable_web_page_preview=True,
+                reply_markup=reply_markup,
+                parse_mode='MARKDOWN'
+            )
             leaderboard_message_alltime_id = result['message_id']
             print("alltime: ", leaderboard_message_alltime_id)
         else:
@@ -53,7 +59,13 @@ async def leaderboard_update():
             )
         
         if leaderboard_message_twoweek_id == "":
-            result = await application.bot.send_message(chat_id=leaderboard_id, text=two_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
+            result = await application.bot.send_message(
+                chat_id=leaderboard_id,
+                text=two_week,
+                disable_web_page_preview=True,
+                reply_markup=reply_markup,
+                parse_mode='MARKDOWN'
+                )
             leaderboard_message_twoweek_id = result['message_id']
             print("twoweek: ", leaderboard_message_twoweek_id)
         else:
@@ -67,7 +79,13 @@ async def leaderboard_update():
             )
         
         if leaderboard_message_oneweek_id == "":
-            result = await application.bot.send_message(chat_id=leaderboard_id, text=one_week, disable_web_page_preview=True, reply_markup=reply_markup, parse_mode='MARKDOWN')
+            result = await application.bot.send_message(
+                chat_id=leaderboard_id,
+                text=one_week,
+                disable_web_page_preview=True,
+                reply_markup=reply_markup,
+                parse_mode='MARKDOWN'
+            )
             leaderboard_message_oneweek_id = result['message_id']
             print("oneweek: ", leaderboard_message_oneweek_id)
         else:
@@ -81,6 +99,14 @@ async def leaderboard_update():
             )
 
         await asyncio.sleep(600)
+
+async def leaderboard_shill_update(text):
+    await application.bot.send_message(
+        chat_id=leaderboard_id,
+        text=text,
+        disable_web_page_preview=True,
+        parse_mode='MARKDOWN'
+    )
 
 async def start(update, context):
     chat_id = update.effective_chat.id
@@ -146,6 +172,7 @@ async def shil_command(update, context):
     diable_preview = False
     if command == 'shill':
         payload_txt = await user_shillmaster(param, username, user_id)
+        await leaderboard_shill_update(payload_txt)
     elif command == 'shillmaster':
         payload_txt = emojis['warning']+" Please specify username like below.\n/shillmaster@username\n"
         if param != '':
