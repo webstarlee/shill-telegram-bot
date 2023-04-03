@@ -22,6 +22,7 @@ async def user_shillmaster(token, username, user_id):
         if len(filtered_pairs) > 0:
             pair = max(filtered_pairs, key=attrgetter('liquidity.usd'))
             bot_txt = ''
+            is_new = True
             marketcap_info = await cryptocurrency_info(token)
             circulating_supply = 0
             marketcap = pair.fdv
@@ -55,6 +56,7 @@ async def user_shillmaster(token, username, user_id):
                 db.commit()
 
             if pair_project != None:
+                is_new = False
                 if float(marketcap)>float(pair_project.ath_value):
                     pair_project.ath_value = str(marketcap)
                     db.commit()
@@ -79,10 +81,12 @@ async def user_shillmaster(token, username, user_id):
                 bot_txt = emojis['tada']+" @"+username+" shilled\n"
                 bot_txt += emojis['point_right']+" "+token+"\n"+emojis['point_right']+" [" + pair.base_token.symbol+"]("+pair.url+")- Current marketcap: $"+format_number_string(marketcap)
  
-        return bot_txt
+            return {"bot_text": bot_txt, "is_new": is_new}
+        else:
+            return {"bot_text": "There is no liquidity for this token", "is_new": False}
     except:
         bot_txt="There is no liquidity for this token"
-        return bot_txt
+        return {"bot_text": bot_txt, "is_new": False}
 
 async def get_user_shillmaster(user):
     return_txt = "❗ There is not any shill yet for "+user

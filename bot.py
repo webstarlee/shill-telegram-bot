@@ -92,7 +92,7 @@ async def leaderboard_update():
                 parse_mode='MARKDOWN'
             )
 
-        await asyncio.sleep(600)
+        await asyncio.sleep(60)
 
 async def leaderboard_shill_update(text):
     await application.bot.send_message(
@@ -164,8 +164,11 @@ async def shil_command(update, context):
     payload_txt = ""
     diable_preview = False
     if command == 'shill':
-        payload_txt = await user_shillmaster(param, username, user_id)
-        await leaderboard_shill_update(payload_txt)
+        payload = await user_shillmaster(param, username, user_id)
+        payload_txt = payload['bot_text']
+        is_new = payload['is_new']
+        if is_new:
+            await leaderboard_shill_update(payload_txt)
     elif command == 'shillmaster':
         payload_txt = emojis['warning']+" Please specify username like below.\n/shillmaster@username\n"
         if param != '':
