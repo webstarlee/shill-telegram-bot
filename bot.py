@@ -15,9 +15,9 @@ import os
 
 application = ApplicationBuilder().token(bot_token).build()
 group_id = ""
-leaderboard_message_alltime_id = ""
-leaderboard_message_twoweek_id = ""
-leaderboard_message_oneweek_id = ""
+leaderboard_message_alltime_id = "11"
+leaderboard_message_twoweek_id = "12"
+leaderboard_message_oneweek_id = "13"
 
 async def leaderboard_update():
     global leaderboard_message_alltime_id
@@ -79,7 +79,7 @@ async def leaderboard_update():
                 reply_markup=reply_markup,
                 parse_mode='MARKDOWN'
             )
-            
+
         await asyncio.sleep(600)
 
 async def start(update, context):
