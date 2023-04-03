@@ -105,3 +105,7 @@ async def get_user_shillmaster(user):
                 return_txt += "Currently: LIQUIDITY REMOVED / HONEYPOT"
 
     return return_txt
+
+def clear_database():
+    db.query(Pair).delete()
+    db.query(Project).delete()

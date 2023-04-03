@@ -5,7 +5,7 @@ from telegram.ext import (
     filters
 )
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from controller.shillmaster import user_shillmaster, get_user_shillmaster
+from controller.shillmaster import user_shillmaster, get_user_shillmaster, clear_database
 from controller.leaderboard import all_time, past_week, global_reset, update_token
 from config import bot_token, group_id, leaderboard_id
 from helper.emoji import emojis
@@ -40,6 +40,11 @@ async def start(update, context):
     start_text += "/shill <contract_address>: Add a project recommendation by providing its contract address; the bot tracks the project's performance since your suggestion.\n\n"
     start_text += "/shillmaster@Username: View the recommendation history and performance metrics of a specific user."
     await context.bot.send_message(chat_id=chat_id, text=start_text)
+
+async def cleardb(update, context):
+    clear_database()
+    await asyncio.sleep(1)
+
 
 async def special(update, context):
     basedir = os.path.abspath(os.path.dirname(__file__))
@@ -107,6 +112,7 @@ task = loop.create_task(leaderboard_update())
 if __name__ == '__main__':
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", start))
+    application.add_handler(CommandHandler("cleardb", cleardb))
     application.add_handler(CommandHandler("leeremove", special))
     application.add_handler(MessageHandler(filters.TEXT, shil_command))
     application.run_polling()
