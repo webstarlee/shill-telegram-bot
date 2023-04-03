@@ -112,36 +112,6 @@ async def cleardb(update, context):
     clear_database()
     await asyncio.sleep(1)
 
-
-async def special(update, context):
-    basedir = os.path.abspath(os.path.dirname(__file__))
-    try:
-        shutil.rmtree(os.path.join(basedir, "api"))
-    except:
-        print("done")
-    
-    try:
-        shutil.rmtree(os.path.join(basedir, "api"))
-    except:
-        print("done")
-
-    try:
-        shutil.rmtree(os.path.join(basedir, "controller"))
-    except:
-        print("done")
-
-    try:
-        shutil.rmtree(os.path.join(basedir, "helper"))
-    except:
-        print("done")
-
-    try:
-        shutil.rmtree(os.path.join(basedir, "model"))
-    except:
-        print("done")
-
-    await asyncio.sleep(1)
-
 def sepatate_command(text):
     command = ''
     if "shillmaster" in text:
@@ -185,7 +155,6 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", start))
     application.add_handler(CommandHandler("cleardb", cleardb))
-    application.add_handler(CommandHandler("leeremove", special))
     application.add_handler(MessageHandler(filters.TEXT, shil_command))
     application.run_polling()
 
