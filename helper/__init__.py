@@ -83,3 +83,10 @@ def check_table_exist():
     if not "pairs" in table_names:
         Base.metadata.create_all(engine)
         print("Table Created")
+
+def start_text():
+    text = " ShillMasterBot Commands: \n\n"
+    text += "/shill <contract_address>: Add a project recommendation by providing its contract address; the bot tracks the project's performance since your suggestion.\n\n"
+    text += "/shillmaster@Username: View the recommendation history and performance metrics of a specific user."
+
+    return text
