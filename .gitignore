@@ -5,6 +5,7 @@ config/__pycache__/
 controller/__pycache__/
 helper/__pycache__/
 model/__pycache__/
+config/database.db
 *.py[cod]
 *$py.class
 
