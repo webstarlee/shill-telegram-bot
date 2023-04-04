@@ -1,5 +1,17 @@
 from operator import attrgetter
+from config import inspector, engine
+from model.tables import Base
 from api import get_token_pairs, cryptocurrency_info
+
+def sepatate_command(text):
+    command = ''
+    if "shillmaster" in text:
+        command='shillmaster'
+    elif 'shill' in text:
+        command='shill'
+    param = text.replace(command, '')
+    param = param.strip()
+    return {'command':command, 'param': param}
 
 def format_number_string(number):
     number = float(number)
@@ -65,3 +77,16 @@ def dex_coin_array(pairs):
         index+=1
     
     return {"dex_array": dex_part_array, "coin_array": coin_market_ids}
+
+def check_table_exist():
+    table_names = inspector.get_table_names()
+    if not "pairs" in table_names:
+        Base.metadata.create_all(engine)
+        print("Table Created")
+
+def start_text():
+    text = " ShillMasterBot Commands: \n\n"
+    text += "/shill <contract_address>: Add a project recommendation by providing its contract address; the bot tracks the project's performance since your suggestion.\n\n"
+    text += "/shillmaster@Username: View the recommendation history and performance metrics of a specific user."
+
+    return text

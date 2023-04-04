@@ -2,7 +2,7 @@ from operator import attrgetter
 from datetime import datetime
 from sqlalchemy import desc
 from config import Session
-from model.tables import Project, Pair
+from model.tables import Project, Pair, Leaderboard
 from helper import (
     format_number_string,
     return_percent,
@@ -11,11 +11,10 @@ from helper import (
     cryptocurrency_info
 )
 from helper.emoji import emojis
-import time
 
 db = Session()
 
-async def user_shillmaster(token, username, user_id):
+async def user_shillmaster(user_id, username, chat_id, token):
     try:
         pairs = await get_token_pairs(token)
         filtered_pairs = [pair for pair in pairs if pair.base_token.address.lower() == token.lower()]
@@ -40,7 +39,6 @@ async def user_shillmaster(token, username, user_id):
             pair_project = db.query(Project).filter(Project.username == username).filter(Project.token == token).first()
             pair_token = db.query(Pair).filter(Pair.token == token).first()
             if pair_token != None:
-
                 pair_token.marketcap = str(marketcap)
                 pair_token.updated_at = datetime.now()
                 db.commit()
@@ -70,6 +68,7 @@ async def user_shillmaster(token, username, user_id):
                 project = Project(
                     username=username,
                     user_id=user_id,
+                    chat_id=chat_id,
                     url=pair.url,
                     token=token,
                     token_symbol=pair.base_token.symbol,
@@ -81,7 +80,7 @@ async def user_shillmaster(token, username, user_id):
                 bot_txt = emojis['tada']+" @"+username+" shilled\n"
                 bot_txt += emojis['point_right']+" "+token+"\n"+emojis['point_right']+" [" + pair.base_token.symbol+"]("+pair.url+")- Current marketcap: $"+format_number_string(marketcap)
  
-            return {"bot_text": bot_txt, "is_new": is_new}
+            return {"text": bot_txt, "is_new": is_new}
         else:
             return {"bot_text": "There is no liquidity for this token", "is_new": False}
     except:
@@ -113,3 +112,4 @@ async def get_user_shillmaster(user):
 def clear_database():
     db.query(Pair).delete()
     db.query(Project).delete()
+    db.query(Leaderboard).delete()

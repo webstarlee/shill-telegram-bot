@@ -1,5 +1,5 @@
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Text
 from sqlalchemy.sql import func
 
 Base = declarative_base()
@@ -10,6 +10,7 @@ class Project(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String)
     user_id = Column(Integer)
+    chat_id = Column(String)
     token = Column(String)
     url = Column(String)
     token_symbol = Column(String)
@@ -33,3 +34,15 @@ class Pair(Base):
 
     def __repr__(self):
         return "<Pair %r>" % self.token
+
+class Leaderboard(Base):
+    __tablename__ = "leaderboards"
+
+    id = Column(Integer, primary_key=True)
+    type = Column(String)
+    chat_id = Column(String)
+    message_id = Column(String)
+    text = Column(Text)
+
+    def __repr__(self):
+        return "<Leaderboard %r>" % self.type
