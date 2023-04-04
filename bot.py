@@ -5,156 +5,108 @@ from telegram.ext import (
     filters
 )
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from controller.shillmaster import user_shillmaster, get_user_shillmaster, clear_database
-from controller.leaderboard import all_time, past_week, global_reset, update_token
-from config import bot_token, leaderboard_id
+from controller.sm_controller import user_shillmaster, get_user_shillmaster, empty_database
+from controller.lb_controller import broadcast, token_update
+from config import bot_token, leaderboard_id, Session
 from helper.emoji import emojis
+from helper import sepatate_command, check_table_exist
 import asyncio
-import shutil
-import os
 
 application = ApplicationBuilder().token(bot_token).build()
-group_id = ""
-leaderboard_message_alltime_id = "11"
-leaderboard_message_twoweek_id = "12"
-leaderboard_message_oneweek_id = "13"
+db = Session()
 
-async def leaderboard_update():
-    global leaderboard_message_alltime_id
-    global leaderboard_message_twoweek_id
-    global leaderboard_message_oneweek_id
+async def send_telegram_message(chat_id, text, disable_preview=False):
+    result = await application.bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            disable_web_page_preview=disable_preview,
+            parse_mode='MARKDOWN'
+        )
+    return result
+
+async def leaderboard():
+    check_table_exist()
     while True:
-        black_list = await update_token()
+        black_list = await token_update()
         if len(black_list)>0:
-            for user_id in black_list:
-                if group_id != "":
-                    await application.bot.ban_chat_member(chat_id=group_id, user_id=user_id)
-        global_reset()
-        all_text = all_time()
-        two_week = past_week(14)
-        one_week = past_week(7)
-        keyboard = [
-            [InlineKeyboardButton(text=emojis['bangbang']+emojis['dog']+" SHILL ON GRIMACE GROUP "+emojis['dog']+emojis['bangbang'], url="https://t.me/sh13shilBot")],
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+            for user in black_list:
+                print(user)
+                # await application.bot.ban_chat_member(chat_id=user['group_id'], user_id=user['user_id'])
+
+        broadcasts = broadcast()
+
+        print(broadcasts)
+        # keyboard = [
+        #     [InlineKeyboardButton(text=emojis['bangbang']+emojis['dog']+" SHILL ON GRIMACE GROUP "+emojis['dog']+emojis['bangbang'], url="https://t.me/sh13shilBot")],
+        # ]
+        # reply_markup = InlineKeyboardMarkup(keyboard)
         
-        if leaderboard_message_alltime_id == "":
-            result = await application.bot.send_message(
-                chat_id=leaderboard_id,
-                text=all_text,
-                disable_web_page_preview=True,
-                parse_mode='MARKDOWN'
-            )
-            leaderboard_message_alltime_id = result['message_id']
-            print("alltime: ", leaderboard_message_alltime_id)
-        else:
-            await application.bot.edit_message_text(
-                chat_id=leaderboard_id,
-                message_id=leaderboard_message_alltime_id,
-                text=all_text,
-                disable_web_page_preview=True,
-                parse_mode='MARKDOWN'
-            )
-        
-        if leaderboard_message_twoweek_id == "":
-            result = await application.bot.send_message(
-                chat_id=leaderboard_id,
-                text=two_week,
-                disable_web_page_preview=True,
-                parse_mode='MARKDOWN'
-                )
-            leaderboard_message_twoweek_id = result['message_id']
-            print("twoweek: ", leaderboard_message_twoweek_id)
-        else:
-            await application.bot.edit_message_text(
-                chat_id=leaderboard_id,
-                message_id=leaderboard_message_twoweek_id,
-                text=two_week,
-                disable_web_page_preview=True,
-                parse_mode='MARKDOWN'
-            )
-        
-        if leaderboard_message_oneweek_id == "":
-            result = await application.bot.send_message(
-                chat_id=leaderboard_id,
-                text=one_week,
-                disable_web_page_preview=True,
-                parse_mode='MARKDOWN'
-            )
-            leaderboard_message_oneweek_id = result['message_id']
-            print("oneweek: ", leaderboard_message_oneweek_id)
-        else:
-            await application.bot.edit_message_text(
-                chat_id=leaderboard_id,
-                message_id=leaderboard_message_oneweek_id,
-                text=one_week,
-                disable_web_page_preview=True,
-                parse_mode='MARKDOWN'
-            )
+
+        # if leaderboard_message_oneweek_id == "":
+        #     result = await application.bot.send_message(
+        #         chat_id=leaderboard_id,
+        #         text=one_week,
+        #         disable_web_page_preview=True,
+        #         parse_mode='MARKDOWN'
+        #     )
+        #     leaderboard_message_oneweek_id = result['message_id']
+        #     print("oneweek: ", leaderboard_message_oneweek_id)
+        # else:
+        #     await application.bot.edit_message_text(
+        #         chat_id=leaderboard_id,
+        #         message_id=leaderboard_message_oneweek_id,
+        #         text=one_week,
+        #         disable_web_page_preview=True,
+        #         parse_mode='MARKDOWN'
+        #     )
 
         await asyncio.sleep(600)
-
-async def leaderboard_shill_update(text):
-    await application.bot.send_message(
-        chat_id=leaderboard_id,
-        text=text,
-        parse_mode='MARKDOWN'
-    )
 
 async def start(update, context):
     chat_id = update.effective_chat.id
     start_text = " ShillMasterBot Commands: \n\n"
     start_text += "/shill <contract_address>: Add a project recommendation by providing its contract address; the bot tracks the project's performance since your suggestion.\n\n"
     start_text += "/shillmaster@Username: View the recommendation history and performance metrics of a specific user."
-    await context.bot.send_message(chat_id=chat_id, text=start_text)
+    await send_telegram_message(chat_id, start_text)
 
-async def cleardb(update, context):
-    clear_database()
-    await asyncio.sleep(1)
-
-def sepatate_command(text):
-    command = ''
-    if "shillmaster" in text:
-        command='shillmaster'
-    elif 'shill' in text:
-        command='shill'
-    param = text.replace(command, '')
-    param = param.strip()
-    return {'command':command, 'param': param}
+async def empty_database(update, context):
+    empty_database()
+    chat_id = update.effective_chat.id
+    text = "Delete all data from database"
+    await send_telegram_message(chat_id, text)
 
 async def shil_command(update, context):
-    global group_id
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+
     receive_text = update.message.text
     receive_text = receive_text.replace('/', '')
     command_param = sepatate_command(receive_text)
     command = command_param['command']
     param = command_param['param']
-    username = update.effective_user.username
-    user_id = update.effective_user.id
     payload_txt = ""
-    diable_preview = False
-    if command == 'shill':
-        payload = await user_shillmaster(param, username, user_id)
-        payload_txt = payload['bot_text']
-        is_new = payload['is_new']
-        if is_new:
-            await leaderboard_shill_update(payload_txt)
-    elif command == 'shillmaster':
+    
+    if command == 'shillmaster':
         payload_txt = emojis['warning']+" Please specify username like below.\n/shillmaster@username\n"
         if param != '':
             payload_txt = await get_user_shillmaster(param)
-        diable_preview = True
-    chat_id = update.effective_chat.id
-    group_id = update.effective_chat.id
-    await context.bot.send_message(chat_id=chat_id, text=payload_txt, disable_web_page_preview=diable_preview, parse_mode='MARKDOWN')
+    elif command == 'shill':
+        payload = await user_shillmaster(user_id, username, chat_id, param)
+        payload_txt = payload['text']
+        is_new = payload['is_new']
+        if is_new:
+            await send_telegram_message(leaderboard_id, payload_txt)
+    
+    await send_telegram_message(chat_id, payload_txt)
 
 loop = asyncio.get_event_loop()
-task = loop.create_task(leaderboard_update())
+task = loop.create_task(leaderboard())
 
 if __name__ == '__main__':
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", start))
-    application.add_handler(CommandHandler("cleardb", cleardb))
+    application.add_handler(CommandHandler("emptydb", empty_database))
     application.add_handler(MessageHandler(filters.TEXT, shil_command))
     application.run_polling()
 
