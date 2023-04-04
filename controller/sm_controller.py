@@ -2,7 +2,7 @@ from operator import attrgetter
 from datetime import datetime
 from sqlalchemy import desc
 from config import Session
-from model.tables import Project, Pair
+from model.tables import Project, Pair, Leaderboard
 from helper import (
     format_number_string,
     return_percent,
@@ -11,7 +11,6 @@ from helper import (
     cryptocurrency_info
 )
 from helper.emoji import emojis
-import time
 
 db = Session()
 
@@ -110,6 +109,7 @@ async def get_user_shillmaster(user):
 
     return return_txt
 
-def empty_database():
+def clear_database():
     db.query(Pair).delete()
     db.query(Project).delete()
+    db.query(Leaderboard).delete()

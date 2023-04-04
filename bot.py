@@ -5,8 +5,8 @@ from telegram.ext import (
     filters
 )
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from controller.sm_controller import user_shillmaster, get_user_shillmaster, empty_database
-from controller.lb_controller import broadcast, token_update
+from controller.sm_controller import user_shillmaster, get_user_shillmaster, clear_database
+from controller.lb_controller import get_broadcast, token_update, Leaderboard
 from config import bot_token, leaderboard_id, Session
 from helper.emoji import emojis
 from helper import sepatate_command, check_table_exist
@@ -31,9 +31,9 @@ async def leaderboard():
         if len(black_list)>0:
             for user in black_list:
                 print(user)
-                # await application.bot.ban_chat_member(chat_id=user['group_id'], user_id=user['user_id'])
+                await application.bot.ban_chat_member(chat_id=user['group_id'], user_id=user['user_id'])
 
-        broadcasts = broadcast()
+        broadcasts = get_broadcast()
 
         print(broadcasts)
         # keyboard = [
@@ -41,24 +41,27 @@ async def leaderboard():
         # ]
         # reply_markup = InlineKeyboardMarkup(keyboard)
         
-
-        # if leaderboard_message_oneweek_id == "":
-        #     result = await application.bot.send_message(
-        #         chat_id=leaderboard_id,
-        #         text=one_week,
-        #         disable_web_page_preview=True,
-        #         parse_mode='MARKDOWN'
-        #     )
-        #     leaderboard_message_oneweek_id = result['message_id']
-        #     print("oneweek: ", leaderboard_message_oneweek_id)
-        # else:
-        #     await application.bot.edit_message_text(
-        #         chat_id=leaderboard_id,
-        #         message_id=leaderboard_message_oneweek_id,
-        #         text=one_week,
-        #         disable_web_page_preview=True,
-        #         parse_mode='MARKDOWN'
-        #     )
+        if len(broadcasts)>0:
+            for item in broadcasts:
+                broadcast = db.query(Leaderboard).filter(Leaderboard.id == item.id).first()
+                if broadcast != None:
+                    if broadcast.message_id:
+                        try:
+                            await application.bot.edit_message_text(
+                                chat_id=broadcast.chat_id,
+                                message_id=broadcast.message_id,
+                                text=broadcast.text,
+                                disable_web_page_preview=True,
+                                parse_mode='MARKDOWN'
+                            )
+                        except:
+                            result = await send_telegram_message(broadcast.chat_id, broadcast.text, True)
+                            broadcast.message_id = result['message_id']
+                            db.commit()
+                    else:
+                        result = await send_telegram_message(broadcast.chat_id, broadcast.text, True)
+                        broadcast.message_id = result['message_id']
+                        db.commit()
 
         await asyncio.sleep(600)
 
@@ -70,7 +73,7 @@ async def start(update, context):
     await send_telegram_message(chat_id, start_text)
 
 async def empty_database(update, context):
-    empty_database()
+    clear_database()
     chat_id = update.effective_chat.id
     text = "Delete all data from database"
     await send_telegram_message(chat_id, text)

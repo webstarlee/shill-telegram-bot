@@ -69,7 +69,7 @@ async def token_update():
     
     return black_list
 
-def broadcast():
+def get_broadcast():
     two_week_ago = datetime.utcnow() - timedelta(days=14)
     one_week_ago = datetime.utcnow() - timedelta(days=7)
     projects_all = db.query(Project).order_by(desc(Project.created_at)).all()
