@@ -61,7 +61,6 @@ def dex_coin_array(pairs):
             dex_part += ","+pair.token
 
         if pair.coin_market_id != None:
-            print(pair.coin_market_id)
             coin_market_part.append(pair.coin_market_id)
         
         if index%20 == 0:
@@ -82,7 +81,6 @@ def check_table_exist():
     table_names = inspector.get_table_names()
     if not "pairs" in table_names:
         Base.metadata.create_all(engine)
-        print("Table Created")
 
 def start_text():
     text = " ShillMasterBot Commands: \n\n"
@@ -90,3 +88,15 @@ def start_text():
     text += "/shillmaster@Username: View the recommendation history and performance metrics of a specific user."
 
     return text
+
+def convert_am_pm(item):
+    item = int(item)
+    time_numner = item
+    status = "AM"
+    if item == 0:
+        time_numner = 12
+    if item > 12:
+        time_numner = item-12
+        status = "PM"
+    result_time = str(time_numner)+str(status)
+    return result_time

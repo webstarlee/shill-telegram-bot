@@ -1,5 +1,5 @@
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, DateTime, Text
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean
 from sqlalchemy.sql import func
 
 Base = declarative_base()
@@ -46,3 +46,16 @@ class Leaderboard(Base):
 
     def __repr__(self):
         return "<Leaderboard %r>" % self.type
+
+class Advertise(Base):
+    __tablename__ = "advertises"
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String)
+    start = Column(DateTime(timezone=True))
+    end = Column(DateTime(timezone=True))
+    text = Column(String)
+    url = Column(String)
+
+    def __repr__(self):
+        return "<Advertise %r>" % self.username
