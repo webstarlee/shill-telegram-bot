@@ -95,7 +95,11 @@ def convert_am_pm(item):
     status = "AM"
     if item == 0:
         time_numner = 12
-    if item > 12:
+    elif item == 12:
+        status = "PM"
+    elif item == 24:
+        time_numner = 12
+    elif item > 12:
         time_numner = item-12
         status = "PM"
     result_time = str(time_numner)+str(status)

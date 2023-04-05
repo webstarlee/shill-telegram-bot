@@ -16,7 +16,8 @@ def new_advertise(data):
         username=data['username'],
         start=start_time,
         end=end_time,
-        active=False,
+        text=data['text'],
+        url=data['url'],
     )
     db.add(advertise)
     db.commit()
@@ -27,16 +28,13 @@ def check_available_time():
     current_hour = datetime.strptime(current_hour_str, "%d/%m/%Y %H")
     current_date = datetime.strptime(current_date_str, "%d/%m/%Y")
     start_time = current_hour+timedelta(hours=1)
-    print("start: ", str(start_time))
     end_time = current_date+timedelta(hours=24)
-    print("end: ", str(end_time))
     number_start = int(start_time.strftime('%H'))
     number_array = []
     for time_number in range(number_start, 25):
         number_array.append(time_number)
 
     advertises = db.query(Advertise).filter(Advertise.start <= end_time).filter(Advertise.end >= start_time).all()
-    print(advertises)
 
     db_number_array = []
     if advertises != None:
@@ -60,5 +58,4 @@ def check_available_time():
                 number_array.remove(item)
 
     print(number_array)
-
     return number_array

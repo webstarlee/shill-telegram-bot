@@ -20,6 +20,10 @@ db = Session()
 NEXT = map(chr, range(10, 22))
 SHOW_HOUR, SHOW_TIME = map(chr, range(8, 10))
 FINAL = map(chr, range(8, 10))
+ASK_TEXT = map(chr, range(8, 10))
+ASK_URL = map(chr, range(8, 10))
+TEXT_TYPING = map(chr, range(8, 10))
+URL_TYPING = map(chr, range(8, 10))
 END = ConversationHandler.END
 
 async def send_telegram_message(chat_id, text, reply_markup="", disable_preview=False):
@@ -82,7 +86,7 @@ async def start(update, context):
 
 async def advertise(update, context):
     chat_id = update.effective_chat.id
-    text = emojis['v']+" Thank you for enquiring about advertising.\n What would you like to do today?"
+    text = "If you want to advertise your project or services under the leaderboards, click the button below."
     keyboard = [
         [InlineKeyboardButton(text="Book an Ad (Info if there is time for ad or not in the next 3 days)", callback_data=str(SHOW_TIME))],
     ]
@@ -107,7 +111,7 @@ async def show_time(update, context):
             
             start_number = int(available_time_list[start_index])
             end_number = int(available_time_list[end_index-1])
-            row = (end_number-start_number)/2+1
+            row = int((end_number-start_number)/2)+1
             total_array = []
             for item in range(start_index, row+start_index):
                 first_num = item
@@ -150,7 +154,7 @@ async def show_time(update, context):
             
             keyboard = total_array
         time_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(text="Please choose TIME", reply_markup=time_markup)
+        await query.edit_message_text(text="When do you want the advertisement to begin being displayed?", reply_markup=time_markup)
 
         return SHOW_HOUR
     else:
@@ -182,21 +186,37 @@ async def show_hour(update, context):
         hour_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(text="Please choose HOUR", reply_markup=hour_markup)
 
-        return FINAL
+        return ASK_TEXT
 
-async def finalize(update, context):
+async def ask_text(update, context):
     query = update.callback_query
     await query.answer()
-    username = update.effective_user.username
     context.user_data['hours'] = query.data
+    await query.edit_message_text(text="Provide text for the button ad, up to a maximum of 30 characters.")
+
+    return TEXT_TYPING
+
+async def save_text_input(update, context):
+    context.user_data['text'] = update.message.text
+    print("called text input save")
+    chat_id = update.effective_chat.id
+    await context.bot.send_message(chat_id=chat_id, text="Provide ad URL: Share the link to be accessed when the advertisement is clicked. This can be Telegram group or the Project's website.")
+
+    return URL_TYPING
+
+async def save_url_input(update, context):
+    context.user_data['url'] = update.message.text
+    username = update.effective_user.username
     context.user_data['username'] = username
+    chat_id = update.effective_chat.id
     new_advertise(context.user_data)
-    await query.edit_message_text(text="Thank you for purchase ad")
+    await context.bot.send_message(chat_id=chat_id, text="Ad purchase confirmation: Thank you for purchasing an advertisement.")
     context.user_data[NEXT] = False
     context.user_data['time'] = None
     context.user_data['hours'] = None
+    context.user_data['text'] = None
+    context.user_data['url'] = None
     context.user_data['username'] = None
-
     return END
 
 async def empty_database(update, context):
@@ -247,7 +267,9 @@ if __name__ == '__main__':
         states={
             SHOW_TIME: [CallbackQueryHandler(show_time)],
             SHOW_HOUR: [CallbackQueryHandler(show_hour)],
-            FINAL: [CallbackQueryHandler(finalize)],
+            ASK_TEXT: [CallbackQueryHandler(ask_text)],
+            TEXT_TYPING: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_text_input)],
+            URL_TYPING: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_url_input)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
