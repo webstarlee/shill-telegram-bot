@@ -190,7 +190,7 @@ def broadcast_text(results):
         for result in results:
             if index <= 10:
                 result_text += "#**"+str(index)+"**: @"+result['username']+" Total "+str(round(result['percent'], 2))+"x.\n"
-                result_text += emojis['point_right']+" ["+result['example'].symbol+"]("+result['example'].url+") Shared marketcap: $"+format_number_string(result['example'].marketcap)+"\n"
+                result_text += emojis['point_right']+" <a href='"+result['example'].url+"'>"+result['example'].symbol+"</a> Shared marketcap: $"+format_number_string(result['example'].marketcap)+"\n"
                 result_text += emojis['point_right']+" Currently: $"+format_number_string(result['example'].current_marketcap)+" ("+str(round(float(result['example'].percent), 2))+"x)\n"
                 if float(result['example'].current_marketcap)<float(result['example'].ath):
                     result_text += emojis['point_right']+" ATH: $"+format_number_string(result['example'].ath)+" ("+return_percent(result['example'].ath, result['example'].marketcap)+"x)\n"

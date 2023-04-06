@@ -59,7 +59,7 @@ async def user_shillmaster(user_id, username, chat_id, token):
                     pair_project.ath_value = str(marketcap)
                     db.commit()
                 marketcap_percent = marketcap/float(pair_project.marketcap)
-                bot_txt = emojis['dizzy']+" ["+pair_project.token_symbol+"]("+pair.url+") Already Shared marketcap: $"+format_number_string(pair_project.marketcap)+"\n"
+                bot_txt = emojis['dizzy']+" <a href='"+pair.url+"' >"+pair_project.token_symbol+"</a> Already Shared marketcap: $"+format_number_string(pair_project.marketcap)+"\n"
                 bot_txt += emojis['point_right']+" Currently: $"+format_number_string(marketcap)+" ("+str(round(marketcap_percent, 2))+"x)\n"
                 if float(marketcap)< float(pair_project.ath_value):
                     bot_txt += emojis['point_right']+" ATH: $"+format_number_string(pair_project.ath_value)+" ("+return_percent(pair_project.ath_value, pair_project.marketcap)+"x)\n"
@@ -78,7 +78,7 @@ async def user_shillmaster(user_id, username, chat_id, token):
                 db.add(project)
                 db.commit()
                 bot_txt = emojis['tada']+" @"+username+" shilled\n"
-                bot_txt += emojis['point_right']+" "+token+"\n"+emojis['point_right']+" [" + pair.base_token.symbol+"]("+pair.url+")- Current marketcap: $"+format_number_string(marketcap)
+                bot_txt += emojis['point_right']+" "+token+"\n"+emojis['point_right']+" <a href='"+pair.url+"' >" + pair.base_token.symbol+"</a>- Current marketcap: $"+format_number_string(marketcap)
  
             return {"text": bot_txt, "is_new": is_new}
         else:
@@ -94,7 +94,7 @@ async def get_user_shillmaster(user):
     if len(user_shills)>0:
         return_txt = emojis['frog']+" Shillmaster stats for "+user+" "+emojis['frog']+"\n\n"
         for project in user_shills:
-            return_txt += emojis['frog']+" ["+project.token_symbol+"]("+project.url+") Shared marketcap: $"+format_number_string(project.marketcap)+"\n"
+            return_txt += emojis['frog']+" <a href='"+project.url+"' >"+project.token_symbol+"</a> Shared marketcap: $"+format_number_string(project.marketcap)+"\n"
             current_info = await current_marketcap(project)
             if float(current_info['marketcap'])>float(project.ath_value):
                 project.ath_value = current_info['marketcap']

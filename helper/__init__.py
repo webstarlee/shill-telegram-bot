@@ -1,8 +1,9 @@
 import random
-from hdwallet import HDWallet
+import string
+import time
 from hdwallet.symbols import ETH as SYMBOL
 from operator import attrgetter
-from config import inspector, engine
+from config import inspector, engine, wallets
 from model.tables import Base
 from api import get_token_pairs, cryptocurrency_info
 
@@ -88,7 +89,8 @@ def check_table_exist():
 def start_text():
     text = " ShillMasterBot Commands: \n\n"
     text += "/shill <contract_address>: Add a project recommendation by providing its contract address; the bot tracks the project's performance since your suggestion.\n\n"
-    text += "/shillmaster@Username: View the recommendation history and performance metrics of a specific user."
+    text += "/shillmaster@Username: View the recommendation history and performance metrics of a specific user.\n\n"
+    text += "/advertise: Book advertising for your project to be displayed under the leaderboards."
 
     return text
 
@@ -115,11 +117,15 @@ def mHash():
         new_private += random_str
     return new_private
 
-def create_new_wallet():
-    hex64 = mHash()
-    PRIVATE_KEY: str = hex64
-    hdwallet: HDWallet = HDWallet(symbol=SYMBOL)
-    hdwallet.from_private_key(private_key=PRIVATE_KEY)
-    priv = hdwallet.private_key()
-    addr = hdwallet.p2pkh_address()
-    return {"private": priv, "address": addr}
+def invoice_hash():
+    chars = string.ascii_uppercase+string.digits
+    stamp = time.time()
+    hash = ''.join(random.choice(chars) for _ in range(16))
+    result = str(hash)+str(stamp)
+    print(result)
+    return result
+
+def choose_wallet():
+    index = random.choice('0123')
+    address = wallets[int(index)]
+    return address

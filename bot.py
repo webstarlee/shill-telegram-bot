@@ -6,6 +6,7 @@ from telegram.ext import (
     MessageHandler,
     filters
 )
+from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from controller.sm_controller import user_shillmaster, get_user_shillmaster, clear_database
 from controller.lb_controller import get_broadcast, token_update, Leaderboard
@@ -16,7 +17,8 @@ from controller.ad_controller import (
     complete_invoice,
     edit_advertise,
     check_available_hour,
-    get_active_advertise
+    get_active_advertise,
+    get_invoice
 )
 from config import bot_token, leaderboard_id, Session
 from helper.emoji import emojis
@@ -34,6 +36,8 @@ TEXT_TYPING = map(chr, range(8, 10))
 URL_TYPING = map(chr, range(8, 10))
 COOSE_TOKEN = map(chr, range(8, 10))
 PAYMENT = map(chr, range(8, 10))
+HASH_TYPING = map(chr, range(8, 10))
+TRAN_TYPING = map(chr, range(8, 10))
 END = ConversationHandler.END
 
 async def send_telegram_message(chat_id, text, reply_markup="", disable_preview=False):
@@ -42,7 +46,7 @@ async def send_telegram_message(chat_id, text, reply_markup="", disable_preview=
                 chat_id=chat_id,
                 text=text,
                 disable_web_page_preview=disable_preview,
-                parse_mode='MARKDOWN'
+                parse_mode='HTML'
             )
         return result
     else:
@@ -51,7 +55,7 @@ async def send_telegram_message(chat_id, text, reply_markup="", disable_preview=
                 text=text,
                 reply_markup=reply_markup,
                 disable_web_page_preview=disable_preview,
-                parse_mode='MARKDOWN'
+                parse_mode='HTML'
             )
         return result
 
@@ -109,7 +113,7 @@ async def leaderboard():
 async def start(update, context):
     chat_id = update.effective_chat.id
     text = start_text()
-    await send_telegram_message(chat_id, text)
+    await application.bot.send_message(chat_id=chat_id,text=text)
 
 async def advertise(update, context):
     chat_id = update.effective_chat.id
@@ -176,6 +180,8 @@ async def show_time(update, context):
                 total_array.append(row_array)
             
             keyboard = total_array
+            cancel_button = [InlineKeyboardButton(text="CANCEL", callback_data="CANCEL_CONV")]
+            keyboard.append(cancel_button)
         time_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(text="When do you want the advertisement to begin being displayed?", reply_markup=time_markup)
 
@@ -197,6 +203,10 @@ async def show_hour(update, context):
             context.user_data[NEXT] = False
         
         await show_time(update, context)
+    elif "CANCEL_CONV" in command:
+        await query.edit_message_text(text="Bye! I hope we can talk again some day.")
+
+        return END
     else:
         context.user_data['time'] = command
         hours_array = check_available_hour(int(command))
@@ -217,7 +227,7 @@ async def show_hour(update, context):
             keyboard.append(single_hour_array)
 
         hour_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(text="Please choose HOUR", reply_markup=hour_markup)
+        await query.edit_message_text(text="Please choose", reply_markup=hour_markup)
 
         return COOSE_TOKEN
 
@@ -264,8 +274,10 @@ async def choose_token(update, context):
                 InlineKeyboardButton(text="0.09 BNB", callback_data="0.003BNB")
             ],
         ]
+    cancel_button = [InlineKeyboardButton(text="CANCEL", callback_data="CANCEL_CONV")]
+    keyboard.append(cancel_button)
     token_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(text="Please choose Token", reply_markup=token_markup)
+    await query.edit_message_text(text="Please choose", reply_markup=token_markup)
 
     return PAYMENT
 
@@ -273,51 +285,74 @@ async def payment(update, context):
     query = update.callback_query
     await query.answer()
     param = query.data
-    symbol=""
-    quantity=""
-    if "ETH" in param:
-        symbol = "ETH"
-        quantity = param.replace("ETH", "")
+    if "CANCEL_CONV" in param:
+        await query.edit_message_text(text="Bye! I hope we can talk again some day.")
 
-    if "BNB" in param:
-        symbol = "BNB"
-        quantity = param.replace("BNB", "")
-    
-    username = update.effective_user.username
-    context.user_data['username'] = username
-    advertise = new_advertise(context.user_data)
-    invoice = create_invoice(advertise, symbol, quantity)
-
-    text = "Please send "+str(invoice.quantity)+" "+str(invoice.symbol)+" to\n<pre>"+str(invoice.address)+"</pre>\nwithin 30 minutes\n"
-    text += "After Complete payment, you will get message for next step.\n\n"
-    text += "I am waiting your payment."
-
-    await query.edit_message_text(text=text, parse_mode='HTML')
-    is_complete = False
-    index=0
-    while True:
-        index += 1
-        is_complete = complete_invoice(invoice)
-        if is_complete:
-            break
-
-        if index == 400:
-            break
-        await asyncio.sleep(10)
-
-    if is_complete:
-        context.user_data['advertise_id'] = advertise.id
-        context.user_data['invoice_id'] = invoice.id
-        await query.edit_message_text(text="Payment Accepted\nProvide text for the button ad, up to a maximum of 30 characters.")
-
-        return TEXT_TYPING
+        return END
     else:
+        symbol=""
+        quantity=""
+        if "ETH" in param:
+            symbol = "ETH"
+            quantity = param.replace("ETH", "")
+
+        if "BNB" in param:
+            symbol = "BNB"
+            quantity = param.replace("BNB", "")
+        
+        username = update.effective_user.username
+        context.user_data['username'] = username
+        advertise = new_advertise(context.user_data)
+        invoice = create_invoice(advertise, symbol, quantity)
+
+        text = "✌ New Invoice ✌\n\nYour Invoice ID is:<pre>"+str(invoice.hash)+"</pre>\n\n"
+        text += "Please send "+str(invoice.quantity)+" "+str(invoice.symbol)+" to\n<pre>"+str(invoice.address)+"</pre>\nwithin 30 minutes\n"
+        text += "After completing the payment, kindly enter '/invoice' in the chat to secure your advertisement..\n"
+
+        await query.edit_message_text(text=text, parse_mode='HTML')
+
         context.user_data[NEXT] = False
         context.user_data['time'] = None
         context.user_data['hours'] = None
-        context.user_data['text'] = None
-        context.user_data['url'] = None
         context.user_data['username'] = None
+
+        return END
+
+async def invoice(update, context):
+    chat_id = update.effective_chat.id
+    print("invoice")
+    text = "Please Enter your invoice ID\n"
+    await send_telegram_message(chat_id, text, "", True)
+
+    return HASH_TYPING
+
+async def save_hash_input(update, context):
+    hash = update.message.text
+    username = update.effective_user.username
+    invoice = get_invoice(hash, username)
+    chat_id = update.effective_chat.id
+    if invoice != None:
+        context.user_data['invoice_id'] = invoice.id
+        text = "Perfect. Now Please input your transaction ID"
+        await context.bot.send_message(chat_id=chat_id, text=text)
+        return TRAN_TYPING
+    else:
+        text = "Sorry, We can not find your Invoice."
+        await context.bot.send_message(chat_id=chat_id, text=text)
+        return END
+
+async def save_transaction_input(update, context):
+    transaction = update.message.text
+    context.user_data['transaction'] = transaction
+    is_complete = complete_invoice(context.user_data)
+    chat_id = update.effective_chat.id
+    if is_complete:
+        await context.bot.send_message(chat_id=chat_id, text="Payment Accepted\nProvide text for the button ad, up to a maximum of 30 characters.")
+
+        return TEXT_TYPING
+    else:
+        await context.bot.send_message(chat_id=chat_id, text="Payment can not be Accepted\nPlease Make correct payment.")
+
         return END
 
 async def save_text_input(update, context):
@@ -330,15 +365,14 @@ async def save_text_input(update, context):
 async def save_url_input(update, context):
     context.user_data['url'] = update.message.text
     chat_id = update.effective_chat.id
-    edit_advertise(context.user_data)
-    await context.bot.send_message(chat_id=chat_id, text="Ad purchase confirmation: Thank you for purchasing an advertisement.")
-    context.user_data[NEXT] = False
-    context.user_data['time'] = None
-    context.user_data['hours'] = None
+    advertise = edit_advertise(context.user_data)
+    start_date = advertise.start.strftime('%d/%m/%Y')
+    start_time_str = advertise.start.strftime('%H')
+    start_time = convert_am_pm(start_time_str)
+    await context.bot.send_message(chat_id=chat_id, text="Ad purchase confirmation✅\nThank you for purchasing an advertisement. Your ad will go live at: "+start_date+" "+start_time)
     context.user_data['text'] = None
     context.user_data['url'] = None
-    context.user_data['username'] = None
-    context.user_data['advertise_id'] = None
+    context.user_data['transaction'] = None
     context.user_data['invoice_id'] = None
     return END
 
@@ -405,9 +439,20 @@ if __name__ == '__main__':
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
+    invoice_handler = ConversationHandler(
+        entry_points=[CommandHandler("invoice", invoice)],
+        states={
+            HASH_TYPING: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_hash_input)],
+            TRAN_TYPING: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_transaction_input)],
+            TEXT_TYPING: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_text_input)],
+            URL_TYPING: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_url_input)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+    )
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", start))
     application.add_handler(ad_handler)
+    application.add_handler(invoice_handler)
     application.add_handler(CommandHandler("emptydb", empty_database))
     application.add_handler(MessageHandler(filters.TEXT, shil_command))
     application.run_polling()

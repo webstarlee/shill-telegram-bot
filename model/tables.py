@@ -66,9 +66,9 @@ class Invoice(Base):
     __tablename__ = "invoices"
 
     id = Column(Integer, primary_key=True)
+    hash = Column(String, nullable=False)
     username = Column(String, nullable=False)
     advertise_id = Column(Integer, nullable=False)
-    private = Column(String, nullable=False)
     address = Column(String, nullable=False)
     symbol = Column(String, nullable=False)
     quantity= Column(String, nullable=False)
