@@ -180,6 +180,8 @@ async def show_time(update, context):
                 total_array.append(row_array)
             
             keyboard = total_array
+            cancel_button = [InlineKeyboardButton(text="CANCEL", callback_data="CANCEL_CONV")]
+            keyboard.append(cancel_button)
         time_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(text="When do you want the advertisement to begin being displayed?", reply_markup=time_markup)
 
@@ -201,6 +203,10 @@ async def show_hour(update, context):
             context.user_data[NEXT] = False
         
         await show_time(update, context)
+    elif "CANCEL_CONV" in command:
+        await query.edit_message_text(text="Bye! I hope we can talk again some day.")
+
+        return END
     else:
         context.user_data['time'] = command
         hours_array = check_available_hour(int(command))
@@ -268,6 +274,8 @@ async def choose_token(update, context):
                 InlineKeyboardButton(text="0.09 BNB", callback_data="0.003BNB")
             ],
         ]
+    cancel_button = [InlineKeyboardButton(text="CANCEL", callback_data="CANCEL_CONV")]
+    keyboard.append(cancel_button)
     token_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(text="Please choose", reply_markup=token_markup)
 
@@ -277,33 +285,38 @@ async def payment(update, context):
     query = update.callback_query
     await query.answer()
     param = query.data
-    symbol=""
-    quantity=""
-    if "ETH" in param:
-        symbol = "ETH"
-        quantity = param.replace("ETH", "")
+    if "CANCEL_CONV" in param:
+        await query.edit_message_text(text="Bye! I hope we can talk again some day.")
 
-    if "BNB" in param:
-        symbol = "BNB"
-        quantity = param.replace("BNB", "")
-    
-    username = update.effective_user.username
-    context.user_data['username'] = username
-    advertise = new_advertise(context.user_data)
-    invoice = create_invoice(advertise, symbol, quantity)
+        return END
+    else:
+        symbol=""
+        quantity=""
+        if "ETH" in param:
+            symbol = "ETH"
+            quantity = param.replace("ETH", "")
 
-    text = "✌ New Invoice ✌\n\nYour Invoice ID is:<pre>"+str(invoice.hash)+"</pre>\n\n"
-    text += "Please send "+str(invoice.quantity)+" "+str(invoice.symbol)+" to\n<pre>"+str(invoice.address)+"</pre>\nwithin 30 minutes\n"
-    text += "After completing the payment, kindly enter '/invoice' in the chat to secure your advertisement..\n"
+        if "BNB" in param:
+            symbol = "BNB"
+            quantity = param.replace("BNB", "")
+        
+        username = update.effective_user.username
+        context.user_data['username'] = username
+        advertise = new_advertise(context.user_data)
+        invoice = create_invoice(advertise, symbol, quantity)
 
-    await query.edit_message_text(text=text, parse_mode='HTML')
+        text = "✌ New Invoice ✌\n\nYour Invoice ID is:<pre>"+str(invoice.hash)+"</pre>\n\n"
+        text += "Please send "+str(invoice.quantity)+" "+str(invoice.symbol)+" to\n<pre>"+str(invoice.address)+"</pre>\nwithin 30 minutes\n"
+        text += "After completing the payment, kindly enter '/invoice' in the chat to secure your advertisement..\n"
 
-    context.user_data[NEXT] = False
-    context.user_data['time'] = None
-    context.user_data['hours'] = None
-    context.user_data['username'] = None
+        await query.edit_message_text(text=text, parse_mode='HTML')
 
-    return END
+        context.user_data[NEXT] = False
+        context.user_data['time'] = None
+        context.user_data['hours'] = None
+        context.user_data['username'] = None
+
+        return END
 
 async def invoice(update, context):
     chat_id = update.effective_chat.id
@@ -312,8 +325,6 @@ async def invoice(update, context):
     await send_telegram_message(chat_id, text, "", True)
 
     return HASH_TYPING
-
-# await query.edit_message_text(text="Ad purchase confirmation✅\nThank you for purchasing an advertisement. Your ad will go live at:"+start_date+" "+start_time)
 
 async def save_hash_input(update, context):
     hash = update.message.text
@@ -358,7 +369,7 @@ async def save_url_input(update, context):
     start_date = advertise.start.strftime('%d/%m/%Y')
     start_time_str = advertise.start.strftime('%H')
     start_time = convert_am_pm(start_time_str)
-    await context.bot.send_message(chat_id=chat_id, text="Ad purchase confirmation✅\nThank you for purchasing an advertisement. Your ad will go live at:"+start_date+" "+start_time)
+    await context.bot.send_message(chat_id=chat_id, text="Ad purchase confirmation✅\nThank you for purchasing an advertisement. Your ad will go live at: "+start_date+" "+start_time)
     context.user_data['text'] = None
     context.user_data['url'] = None
     context.user_data['transaction'] = None
