@@ -51,11 +51,30 @@ class Advertise(Base):
     __tablename__ = "advertises"
 
     id = Column(Integer, primary_key=True)
-    username = Column(String)
-    start = Column(DateTime(timezone=True))
-    end = Column(DateTime(timezone=True))
-    text = Column(String)
-    url = Column(String)
+    username = Column(String, nullable=False)
+    start = Column(DateTime(timezone=True), nullable=False)
+    end = Column(DateTime(timezone=True), nullable=False)
+    text = Column(String, nullable=True)
+    url = Column(String, nullable=True)
+    paid= Column(Boolean, default=False)
+    created_at=Column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
         return "<Advertise %r>" % self.username
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String, nullable=False)
+    advertise_id = Column(Integer, nullable=False)
+    private = Column(String, nullable=False)
+    address = Column(String, nullable=False)
+    symbol = Column(String, nullable=False)
+    quantity= Column(String, nullable=False)
+    paid= Column(Boolean, default=False)
+    complete= Column(Boolean, default=False)
+    created_at=Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return "<Invoice %r>" % self.username

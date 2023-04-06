@@ -9,7 +9,15 @@ from telegram.ext import (
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from controller.sm_controller import user_shillmaster, get_user_shillmaster, clear_database
 from controller.lb_controller import get_broadcast, token_update, Leaderboard
-from controller.ad_controller import new_advertise, check_available_time
+from controller.ad_controller import (
+    new_advertise,
+    check_available_time,
+    create_invoice,
+    complete_invoice,
+    edit_advertise,
+    check_available_hour,
+    get_active_advertise
+)
 from config import bot_token, leaderboard_id, Session
 from helper.emoji import emojis
 from helper import sepatate_command, check_table_exist, start_text, convert_am_pm
@@ -24,6 +32,8 @@ ASK_TEXT = map(chr, range(8, 10))
 ASK_URL = map(chr, range(8, 10))
 TEXT_TYPING = map(chr, range(8, 10))
 URL_TYPING = map(chr, range(8, 10))
+COOSE_TOKEN = map(chr, range(8, 10))
+PAYMENT = map(chr, range(8, 10))
 END = ConversationHandler.END
 
 async def send_telegram_message(chat_id, text, reply_markup="", disable_preview=False):
@@ -54,6 +64,13 @@ async def leaderboard():
                 await application.bot.ban_chat_member(chat_id=user['group_id'], user_id=user['user_id'])
 
         broadcasts = get_broadcast()
+        advertise = get_active_advertise()
+        reply_markup=""
+        if advertise != None:
+            keyboard = [
+                [InlineKeyboardButton(text=emojis['bangbang']+emojis['dog']+" "+advertise.text+" "+emojis['dog']+emojis['bangbang'], url=advertise.url)],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
         
         if len(broadcasts)>0:
             for item in broadcasts:
@@ -61,19 +78,29 @@ async def leaderboard():
                 if broadcast != None:
                     if broadcast.message_id:
                         try:
-                            await application.bot.edit_message_text(
-                                chat_id=broadcast.chat_id,
-                                message_id=broadcast.message_id,
-                                text=broadcast.text,
-                                disable_web_page_preview=True,
-                                parse_mode='MARKDOWN'
-                            )
+                            if reply_markup =="":
+                                await application.bot.edit_message_text(
+                                    chat_id=broadcast.chat_id,
+                                    message_id=broadcast.message_id,
+                                    text=broadcast.text,
+                                    disable_web_page_preview=True,
+                                    parse_mode='MARKDOWN'
+                                )
+                            else:
+                                await application.bot.edit_message_text(
+                                    chat_id=broadcast.chat_id,
+                                    message_id=broadcast.message_id,
+                                    text=broadcast.text,
+                                    disable_web_page_preview=True,
+                                    reply_markup=reply_markup,
+                                    parse_mode='MARKDOWN'
+                                )
                         except:
-                            result = await send_telegram_message(broadcast.chat_id, broadcast.text, "", True)
+                            result = await send_telegram_message(broadcast.chat_id, broadcast.text, reply_markup, True)
                             broadcast.message_id = result['message_id']
                             db.commit()
                     else:
-                        result = await send_telegram_message(broadcast.chat_id, broadcast.text, "", True)
+                        result = await send_telegram_message(broadcast.chat_id, broadcast.text, reply_markup, True)
                         broadcast.message_id = result['message_id']
                         db.commit()
 
@@ -109,9 +136,7 @@ async def show_time(update, context):
                 end_index = len(available_time_list)
                 last_button = [InlineKeyboardButton(text="BACK", callback_data="SHOW_TIME")]
             
-            start_number = int(available_time_list[start_index])
-            end_number = int(available_time_list[end_index-1])
-            row = int((end_number-start_number)/2)+1
+            row = int((len(available_time_list)+1)/2)
             total_array = []
             for item in range(start_index, row+start_index):
                 first_num = item
@@ -132,10 +157,8 @@ async def show_time(update, context):
             keyboard = total_array
         else:
             start_index = 0
-            start_number = int(available_time_list[start_index])
             end_index = len(available_time_list)
-            end_number = int(available_time_list[end_index-1])
-            row = int((end_number-start_number)/2)+1
+            row = int((len(available_time_list)+1)/2)
             total_array = []
             for item in range(start_index, row+start_index):
                 first_num = item
@@ -176,29 +199,129 @@ async def show_hour(update, context):
         await show_time(update, context)
     else:
         context.user_data['time'] = command
-        keyboard = [
-            [InlineKeyboardButton(text="2 Hours - 0.075 ETH / 0.45 BNB", callback_data=2)],
-            [InlineKeyboardButton(text="4 Hours - 0.075 ETH / 0.45 BNB", callback_data=4)],
-            [InlineKeyboardButton(text="8 Hours - 0.075 ETH / 0.45 BNB", callback_data=8)],
-            [InlineKeyboardButton(text="12 Hours - 0.075 ETH / 0.45 BNB", callback_data=12)],
-            [InlineKeyboardButton(text="24 Hours - 0.075 ETH / 0.45 BNB", callback_data=24)],
-        ]
+        hours_array = check_available_hour(int(command))
+        keyboard = []
+        for hour in hours_array:
+            budget_text = ""
+            if hour == 2:
+                budget_text = "2 Hours - 0.005 ETH / 0.01 BNB"
+            elif hour == 4:
+                budget_text = "4 Hours - 0.01 ETH / 0.02 BNB"
+            elif hour == 8:
+                budget_text = "8 Hours - 0.02 ETH / 0.04 BNB"
+            elif hour == 12:
+                budget_text = "12 Hours - 0.04 ETH / 0.08 BNB"
+            elif hour == 24:
+                budget_text = "24 Hours - 0.08 ETH / 0.16 BNB"
+            single_hour_array = [InlineKeyboardButton(text=budget_text, callback_data=hour)]
+            keyboard.append(single_hour_array)
+
         hour_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(text="Please choose HOUR", reply_markup=hour_markup)
 
-        return ASK_TEXT
+        return COOSE_TOKEN
 
-async def ask_text(update, context):
+async def choose_token(update, context):
+    query = update.callback_query
+    keyboard=[]
+    await query.answer()
+    hours = int(query.data)
+    print("hours: ", hours)
+    context.user_data['hours'] = hours
+    if hours==2:
+        print("call here 2")
+        keyboard = [
+            [
+                InlineKeyboardButton(text="0.015 ETH", callback_data="0.001ETH"),
+                InlineKeyboardButton(text="0.09 BNB", callback_data="0.003BNB")
+            ],
+        ]
+    elif hours==4:
+        keyboard = [
+            [
+                InlineKeyboardButton(text="0.015 ETH", callback_data="0.001ETH"),
+                InlineKeyboardButton(text="0.09 BNB", callback_data="0.003BNB")
+            ],
+        ]
+    elif hours == 8:
+        keyboard = [
+            [
+                InlineKeyboardButton(text="0.015 ETH", callback_data="0.001ETH"),
+                InlineKeyboardButton(text="0.09 BNB", callback_data="0.003BNB")
+            ],
+        ]
+    elif hours == 12:
+        keyboard = [
+            [
+                InlineKeyboardButton(text="0.015 ETH", callback_data="0.001ETH"),
+                InlineKeyboardButton(text="0.09 BNB", callback_data="0.003BNB")
+            ],
+        ]
+    elif hours==24:
+        keyboard = [
+            [
+                InlineKeyboardButton(text="0.015 ETH", callback_data="0.001ETH"),
+                InlineKeyboardButton(text="0.09 BNB", callback_data="0.003BNB")
+            ],
+        ]
+    token_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(text="Please choose Token", reply_markup=token_markup)
+
+    return PAYMENT
+
+async def payment(update, context):
     query = update.callback_query
     await query.answer()
-    context.user_data['hours'] = query.data
-    await query.edit_message_text(text="Provide text for the button ad, up to a maximum of 30 characters.")
+    param = query.data
+    symbol=""
+    quantity=""
+    if "ETH" in param:
+        symbol = "ETH"
+        quantity = param.replace("ETH", "")
 
-    return TEXT_TYPING
+    if "BNB" in param:
+        symbol = "BNB"
+        quantity = param.replace("BNB", "")
+    
+    username = update.effective_user.username
+    context.user_data['username'] = username
+    advertise = new_advertise(context.user_data)
+    invoice = create_invoice(advertise, symbol, quantity)
+
+    text = "Please send "+str(invoice.quantity)+" "+str(invoice.symbol)+" to\n<pre>"+str(invoice.address)+"</pre>\nwithin 30 minutes\n"
+    text += "After Complete payment, you will get message for next step.\n\n"
+    text += "I am waiting your payment."
+
+    await query.edit_message_text(text=text, parse_mode='HTML')
+    is_complete = False
+    index=0
+    while True:
+        index += 1
+        is_complete = complete_invoice(invoice)
+        if is_complete:
+            break
+
+        if index == 400:
+            break
+        await asyncio.sleep(10)
+
+    if is_complete:
+        context.user_data['advertise_id'] = advertise.id
+        context.user_data['invoice_id'] = invoice.id
+        await query.edit_message_text(text="Payment Accepted\nProvide text for the button ad, up to a maximum of 30 characters.")
+
+        return TEXT_TYPING
+    else:
+        context.user_data[NEXT] = False
+        context.user_data['time'] = None
+        context.user_data['hours'] = None
+        context.user_data['text'] = None
+        context.user_data['url'] = None
+        context.user_data['username'] = None
+        return END
 
 async def save_text_input(update, context):
     context.user_data['text'] = update.message.text
-    print("called text input save")
     chat_id = update.effective_chat.id
     await context.bot.send_message(chat_id=chat_id, text="Provide ad URL: Share the link to be accessed when the advertisement is clicked. This can be Telegram group or the Project's website.")
 
@@ -206,10 +329,8 @@ async def save_text_input(update, context):
 
 async def save_url_input(update, context):
     context.user_data['url'] = update.message.text
-    username = update.effective_user.username
-    context.user_data['username'] = username
     chat_id = update.effective_chat.id
-    new_advertise(context.user_data)
+    edit_advertise(context.user_data)
     await context.bot.send_message(chat_id=chat_id, text="Ad purchase confirmation: Thank you for purchasing an advertisement.")
     context.user_data[NEXT] = False
     context.user_data['time'] = None
@@ -217,6 +338,8 @@ async def save_url_input(update, context):
     context.user_data['text'] = None
     context.user_data['url'] = None
     context.user_data['username'] = None
+    context.user_data['advertise_id'] = None
+    context.user_data['invoice_id'] = None
     return END
 
 async def empty_database(update, context):
@@ -252,11 +375,19 @@ async def shil_command(update, context):
 
 async def cancel(update, context):
     """Cancels and ends the conversation."""
+    context.user_data[NEXT] = False
+    context.user_data['time'] = None
+    context.user_data['hours'] = None
+    context.user_data['text'] = None
+    context.user_data['url'] = None
+    context.user_data['username'] = None
+    context.user_data['advertise_id'] = None
+    context.user_data['invoice_id'] = None
     await update.message.reply_text(
         "Bye! I hope we can talk again some day."
     )
 
-    return ConversationHandler.END
+    return END
 
 loop = asyncio.get_event_loop()
 task = loop.create_task(leaderboard())
@@ -267,7 +398,8 @@ if __name__ == '__main__':
         states={
             SHOW_TIME: [CallbackQueryHandler(show_time)],
             SHOW_HOUR: [CallbackQueryHandler(show_hour)],
-            ASK_TEXT: [CallbackQueryHandler(ask_text)],
+            COOSE_TOKEN: [CallbackQueryHandler(choose_token)],
+            PAYMENT: [CallbackQueryHandler(payment)],
             TEXT_TYPING: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_text_input)],
             URL_TYPING: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_url_input)],
         },
