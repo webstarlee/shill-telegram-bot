@@ -88,7 +88,7 @@ async def leaderboard():
                                     message_id=broadcast.message_id,
                                     text=broadcast.text,
                                     disable_web_page_preview=True,
-                                    parse_mode='MARKDOWN'
+                                    parse_mode='HTML'
                                 )
                             else:
                                 await application.bot.edit_message_text(
@@ -97,7 +97,7 @@ async def leaderboard():
                                     text=broadcast.text,
                                     disable_web_page_preview=True,
                                     reply_markup=reply_markup,
-                                    parse_mode='MARKDOWN'
+                                    parse_mode='HTML'
                                 )
                         except:
                             result = await send_telegram_message(broadcast.chat_id, broadcast.text, reply_markup, True)
