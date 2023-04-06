@@ -2,7 +2,7 @@ from model.tables import Advertise, Invoice
 from datetime import datetime, timedelta
 from sqlalchemy import or_
 from config import Session, eth_url, bsc_url, api_key
-from helper import create_new_wallet
+from helper import choose_wallet, invoice_hash
 from web3 import Web3
 from moralis import evm_api
 
@@ -28,12 +28,13 @@ def new_advertise(data):
     return advertise
 
 def create_invoice(advertise, symbol, quantity):
-    new_wallet = create_new_wallet()
+    address = choose_wallet()
+    hash=invoice_hash()
     invoice = Invoice(
         username=advertise.username,
+        hash=hash,
         advertise_id=advertise.id,
-        private=new_wallet['private'],
-        address=new_wallet['address'],
+        address=address,
         symbol=symbol,
         quantity=quantity,
     )
@@ -105,45 +106,45 @@ def check_available_hour(time):
     print(origin_array)
     return origin_array
 
-def complete_invoice(invoice):
-    params = {}
-    chain = "eth"
-    if invoice.symbol == "BNB":
-        chain = "bsc"
-    params = {
-        "address": invoice.address,
-        "chain": chain,
-    }
+def get_invoice(hash, username):
+    invoice = db.query(Invoice).filter(Invoice.hash == hash).filter(Invoice.username == username).first()
+    return invoice
 
-    response = evm_api.transaction.get_wallet_transactions(api_key=api_key, params=params)
-
-    print("checking")
-    if len(response['result'])>0:
-        transactions = response['result']
-        for transaction in transactions:
-            print(transaction)
+def complete_invoice(data):
+    try:
+        invoice = db.query(Invoice).filter(Invoice.id == data['invoice_id']).first()
+        if invoice != None:
+            chain = "eth"
+            if invoice.symbol == "BNB": chain = "bsc"
+            params = {"chain": chain, "transaction_hash": data['transaction']}
+            
+            response = evm_api.transaction.get_transaction(api_key=api_key, params=params)
+            transaction = response
             value = int(transaction['value'])
             final_value = value/10**18
             if str(transaction['to_address']).lower() == str(invoice.address).lower() and float(invoice.quantity) <= float(final_value):
-                ed_invoice = db.query(Invoice).filter(Invoice.id == invoice.id).first()
-                if ed_invoice != None:
-                    ed_invoice.paid = True
-                    db.commit()
+                invoice.paid = True
+                db.commit()
                 return True
+        
         return False
-    else:
+    except:
         return False
 
 def edit_advertise(data):
     invoice = db.query(Invoice).filter(Invoice.id == data['invoice_id']).first()
     if invoice != None:
         if invoice.paid:
-            advertise = db.query(Advertise).filter(Advertise.id == data['advertise_id']).first()
+            advertise = db.query(Advertise).filter(Advertise.id == invoice.advertise_id).first()
             if advertise != None:
                 advertise.text = data['text']
                 advertise.url = data['url']
                 advertise.paid = True
                 db.commit()
+
+                return advertise
+            
+    return None
 
 def get_active_advertise():
     now_time = datetime.utcnow()
