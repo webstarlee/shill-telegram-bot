@@ -18,7 +18,8 @@ from helper.emoji import emojis
 db = Session()
 
 async def token_update():
-    black_list=[]
+    black_users=[]
+    black_liquidities=[]
     all_pairs = db.query(Pair).all()
     dex_coin_results = dex_coin_array(all_pairs)
     dex_array = dex_coin_results['dex_array']
@@ -44,30 +45,43 @@ async def token_update():
 
         if len(liquidities)>0:
             liquidity = max(liquidities, key=attrgetter('liquidity.usd'))
-            circulating_supply = None
-            now_marketcap = liquidity.fdv
-            if len(market_info)>0:
-                circulating_supply = market_info[0]['self_reported_circulating_supply']
-            
-            if circulating_supply != None:
-                now_marketcap = circulating_supply*liquidity.price_usd
-            
-            pair.marketcap = str(now_marketcap)
-            pair.updated_at = datetime.now()
-            db.commit()
+            if liquidity.usd > 0:
+                circulating_supply = None
+                now_marketcap = liquidity.fdv
+                if len(market_info)>0:
+                    circulating_supply = market_info[0]['self_reported_circulating_supply']
+                
+                if circulating_supply != None:
+                    now_marketcap = circulating_supply*liquidity.price_usd
+                
+                pair.marketcap = str(now_marketcap)
+                pair.updated_at = datetime.now()
+                db.commit()
+            else:
+                black_liquidities.append(pair.token)
+                projects = db.query(Project).filter(Project.token == pair.token).filter(Project.created_at >= past_thirty_min).all()
+                if projects != None:
+                    for project in projects:
+                        black_users.append({"user_id": project.user_id, "group_id": project.chat_id})
+                        db.delete(project)
+                        db.commit()
+                db.delete(pair)
+                db.commit()
+
         else:
+            black_liquidities.append(pair.token)
             # Get User list to kick from Group
             past_thirty_min = datetime.utcnow() - timedelta(minutes=30)
             projects = db.query(Project).filter(Project.token == pair.token).filter(Project.created_at >= past_thirty_min).all()
             if projects != None:
                 for project in projects:
-                    black_list.append({"user_id": project.user_id, "group_id": project.chat_id})
+                    black_users.append({"user_id": project.user_id, "group_id": project.chat_id})
                     db.delete(project)
                     db.commit()
             db.delete(pair)
             db.commit()
     
-    return black_list
+    return {"black_users": black_users, "black_liquidities": black_liquidities }
 
 def get_broadcast():
     two_week_ago = datetime.utcnow() - timedelta(days=14)
@@ -189,7 +203,7 @@ def broadcast_text(results):
         index = 1
         for result in results:
             if index <= 10:
-                result_text += "#**"+str(index)+"**: @"+result['username']+" Total "+str(round(result['percent'], 2))+"x.\n"
+                result_text += "#"+str(index)+": @"+result['username']+" Total "+str(round(result['percent'], 2))+"x.\n"
                 result_text += emojis['point_right']+" <a href='"+result['example'].url+"'>"+result['example'].symbol+"</a> Shared marketcap: $"+format_number_string(result['example'].marketcap)+"\n"
                 result_text += emojis['point_right']+" Currently: $"+format_number_string(result['example'].current_marketcap)+" ("+str(round(float(result['example'].percent), 2))+"x)\n"
                 if float(result['example'].current_marketcap)<float(result['example'].ath):
