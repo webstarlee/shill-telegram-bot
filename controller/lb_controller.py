@@ -59,6 +59,7 @@ async def token_update():
                 db.commit()
             else:
                 black_liquidities.append(pair.token)
+                past_thirty_min = datetime.utcnow() - timedelta(minutes=30)
                 projects = db.query(Project).filter(Project.token == pair.token).filter(Project.created_at >= past_thirty_min).all()
                 if projects != None:
                     for project in projects:
