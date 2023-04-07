@@ -78,3 +78,15 @@ class Invoice(Base):
 
     def __repr__(self):
         return "<Invoice %r>" % self.username
+
+class Warn(Base):
+    __tablename__ = "warns"
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String, nullable=False)
+    count = Column(Integer, nullable=False)
+    tokens = Column(String, nullable=False)
+    created_at=Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return "<Warn %r>" % self.username
