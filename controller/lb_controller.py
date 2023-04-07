@@ -44,15 +44,15 @@ async def token_update():
         market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair.coin_market_id]
 
         if len(liquidities)>0:
-            liquidity = max(liquidities, key=attrgetter('liquidity.usd'))
-            if liquidity.usd > 0:
+            final_pair = max(liquidities, key=attrgetter('liquidity.usd'))
+            if final_pair.liquidity.usd > 0:
                 circulating_supply = None
-                now_marketcap = liquidity.fdv
+                now_marketcap = final_pair.fdv
                 if len(market_info)>0:
                     circulating_supply = market_info[0]['self_reported_circulating_supply']
                 
                 if circulating_supply != None:
-                    now_marketcap = circulating_supply*liquidity.price_usd
+                    now_marketcap = circulating_supply*final_pair.price_usd
                 
                 pair.marketcap = str(now_marketcap)
                 pair.updated_at = datetime.now()
