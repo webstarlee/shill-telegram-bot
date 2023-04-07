@@ -3,10 +3,10 @@ import aiohttp
 from config import cmc_key
 from helper.tokenPair import TokenPair
 headers = {
-            'Accepts': 'application/json',
-            'Accept-Encoding': 'deflate, gzip',
-            'X-CMC_PRO_API_KEY': cmc_key
-        }
+        'Accepts': 'application/json',
+        'Accept-Encoding': 'deflate, gzip',
+        'X-CMC_PRO_API_KEY': cmc_key
+    }
 async def get_token_pairs(token):
     try:
         dex_url = "https://api.dexscreener.io/latest/dex/tokens/"+token

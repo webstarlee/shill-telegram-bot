@@ -63,9 +63,16 @@ async def leaderboard():
     check_table_exist()
     while True:
         black_list = await token_update()
-        if len(black_list)>0:
-            for user in black_list:
+        black_users = black_list['black_users']
+        black_liquidities = black_list['black_liquidities']
+        if len(black_users)>0:
+            for user in black_users:
                 await application.bot.ban_chat_member(chat_id=user['group_id'], user_id=user['user_id'])
+        
+        if len(black_liquidities)>0:
+            for token in black_liquidities:
+                text = "LIQUIDITY REMOVED ❌ "+token
+                await send_telegram_message(leaderboard_id, text, "", True)
 
         broadcasts = get_broadcast()
         advertise = get_active_advertise()
@@ -88,7 +95,7 @@ async def leaderboard():
                                     message_id=broadcast.message_id,
                                     text=broadcast.text,
                                     disable_web_page_preview=True,
-                                    parse_mode='MARKDOWN'
+                                    parse_mode='HTML'
                                 )
                             else:
                                 await application.bot.edit_message_text(
@@ -97,7 +104,7 @@ async def leaderboard():
                                     text=broadcast.text,
                                     disable_web_page_preview=True,
                                     reply_markup=reply_markup,
-                                    parse_mode='MARKDOWN'
+                                    parse_mode='HTML'
                                 )
                         except:
                             result = await send_telegram_message(broadcast.chat_id, broadcast.text, reply_markup, True)
@@ -108,7 +115,7 @@ async def leaderboard():
                         broadcast.message_id = result['message_id']
                         db.commit()
 
-        await asyncio.sleep(600)
+        await asyncio.sleep(300)
 
 async def start(update, context):
     chat_id = update.effective_chat.id
@@ -119,7 +126,7 @@ async def advertise(update, context):
     chat_id = update.effective_chat.id
     text = "If you want to advertise your project or services under the leaderboards, click the button below."
     keyboard = [
-        [InlineKeyboardButton(text="Book an Ad (Info if there is time for ad or not in the next 3 days)", callback_data=str(SHOW_TIME))],
+        [InlineKeyboardButton(text="Book an Ad", callback_data=str(SHOW_TIME))],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await send_telegram_message(chat_id, text, reply_markup, True)
@@ -187,7 +194,7 @@ async def show_time(update, context):
 
         return SHOW_HOUR
     else:
-        await query.edit_message_text(text="Sorry There is no available ad for today")
+        await query.edit_message_text(text="Sorry there are no available ads for today.")
 
         return END
 
@@ -214,15 +221,15 @@ async def show_hour(update, context):
         for hour in hours_array:
             budget_text = ""
             if hour == 2:
-                budget_text = "2 Hours - 0.005 ETH / 0.01 BNB"
+                budget_text = "2 Hours - 0.075 ETH / 0.45 BNB"
             elif hour == 4:
-                budget_text = "4 Hours - 0.01 ETH / 0.02 BNB"
+                budget_text = "4 Hours - 0.13 ETH / 0.78 BNB"
             elif hour == 8:
-                budget_text = "8 Hours - 0.02 ETH / 0.04 BNB"
+                budget_text = "8 Hours - 0.2 ETH / 1.2 BNB"
             elif hour == 12:
-                budget_text = "12 Hours - 0.04 ETH / 0.08 BNB"
+                budget_text = "12 Hours - 0.3 ETH / 1.8 BNB"
             elif hour == 24:
-                budget_text = "24 Hours - 0.08 ETH / 0.16 BNB"
+                budget_text = "24 Hours - 0.5 ETH / 3 BNB"
             single_hour_array = [InlineKeyboardButton(text=budget_text, callback_data=hour)]
             keyboard.append(single_hour_array)
 
@@ -242,36 +249,36 @@ async def choose_token(update, context):
         print("call here 2")
         keyboard = [
             [
-                InlineKeyboardButton(text="0.015 ETH", callback_data="0.001ETH"),
-                InlineKeyboardButton(text="0.09 BNB", callback_data="0.003BNB")
+                InlineKeyboardButton(text="0.075 ETH", callback_data="0.075ETH"),
+                InlineKeyboardButton(text="0.45 BNB", callback_data="0.45BNB")
             ],
         ]
     elif hours==4:
         keyboard = [
             [
-                InlineKeyboardButton(text="0.015 ETH", callback_data="0.001ETH"),
-                InlineKeyboardButton(text="0.09 BNB", callback_data="0.003BNB")
+                InlineKeyboardButton(text="0.13 ETH", callback_data="0.13ETH"),
+                InlineKeyboardButton(text="0.78 BNB", callback_data="0.78BNB")
             ],
         ]
     elif hours == 8:
         keyboard = [
             [
-                InlineKeyboardButton(text="0.015 ETH", callback_data="0.001ETH"),
-                InlineKeyboardButton(text="0.09 BNB", callback_data="0.003BNB")
+                InlineKeyboardButton(text="0.2 ETH", callback_data="0.2ETH"),
+                InlineKeyboardButton(text="1.2 BNB", callback_data="1.2BNB")
             ],
         ]
     elif hours == 12:
         keyboard = [
             [
-                InlineKeyboardButton(text="0.015 ETH", callback_data="0.001ETH"),
-                InlineKeyboardButton(text="0.09 BNB", callback_data="0.003BNB")
+                InlineKeyboardButton(text="0.3 ETH", callback_data="0.3ETH"),
+                InlineKeyboardButton(text="1.8 BNB", callback_data="1.8BNB")
             ],
         ]
     elif hours==24:
         keyboard = [
             [
-                InlineKeyboardButton(text="0.015 ETH", callback_data="0.001ETH"),
-                InlineKeyboardButton(text="0.09 BNB", callback_data="0.003BNB")
+                InlineKeyboardButton(text="0.5 ETH", callback_data="0.5ETH"),
+                InlineKeyboardButton(text="3 BNB", callback_data="3BNB")
             ],
         ]
     cancel_button = [InlineKeyboardButton(text="CANCEL", callback_data="CANCEL_CONV")]
