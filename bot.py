@@ -22,7 +22,7 @@ from controller.ad_controller import (
 )
 from config import bot_token, leaderboard_id, Session
 from helper.emoji import emojis
-from helper import sepatate_command, check_table_exist, start_text, convert_am_pm
+from helper import check_table_exist, start_text, convert_am_pm, get_params
 import asyncio
 
 application = ApplicationBuilder().token(bot_token).build()
@@ -389,33 +389,27 @@ async def empty_database(update, context):
     text = "Delete all data from database"
     await send_telegram_message(chat_id, text)
 
-async def shil_command(update, context):
+async def user_shill_state(update, context):
+    receive_text = update.message.text
+    chat_id = update.effective_chat.id
+    param = get_params(receive_text, "/shillmaster@")
+    payload_txt = await get_user_shillmaster(param)
+    await send_telegram_message(chat_id, payload_txt)
+
+async def user_shill_token(update, context):
+    receive_text = update.message.text
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
     username = update.effective_user.username
-
-    receive_text = update.message.text
-    receive_text = receive_text.replace('/', '')
-    command_param = sepatate_command(receive_text)
-    command = command_param['command']
-    param = command_param['param']
-    payload_txt = ""
-    
-    if command == 'shillmaster':
-        payload_txt = emojis['warning']+" Please specify username like below.\n/shillmaster@username\n"
-        if param != '':
-            payload_txt = await get_user_shillmaster(param)
-            await send_telegram_message(chat_id, payload_txt)
-    elif command == 'shill':
-        payload = await user_shillmaster(user_id, username, chat_id, param)
-        payload_txt = payload['text']
-        is_new = payload['is_new']
-        await send_telegram_message(chat_id, payload_txt)
-        if is_new:
-            await send_telegram_message(leaderboard_id, payload_txt)
+    param = get_params(receive_text, "/shill")
+    payload = await user_shillmaster(user_id, username, chat_id, param)
+    payload_txt = payload['text']
+    is_new = payload['is_new']
+    await send_telegram_message(chat_id, payload_txt)
+    if is_new:
+        await send_telegram_message(leaderboard_id, payload_txt)
 
 async def cancel(update, context):
-    """Cancels and ends the conversation."""
     context.user_data[NEXT] = False
     context.user_data['time'] = None
     context.user_data['hours'] = None
@@ -424,9 +418,7 @@ async def cancel(update, context):
     context.user_data['username'] = None
     context.user_data['advertise_id'] = None
     context.user_data['invoice_id'] = None
-    await update.message.reply_text(
-        "Bye! I hope we can talk again some day."
-    )
+    await update.message.reply_text("Bye! I hope we can talk again some day.")
 
     return END
 
@@ -461,7 +453,8 @@ if __name__ == '__main__':
     application.add_handler(ad_handler)
     application.add_handler(invoice_handler)
     application.add_handler(CommandHandler("emptydb", empty_database))
-    application.add_handler(MessageHandler(filters.TEXT, shil_command))
+    application.add_handler(MessageHandler(filters.Regex("/shillmaster@(s)?"), user_shill_state))
+    application.add_handler(MessageHandler(filters.Regex("/shill0x(s)?"), user_shill_token))
     application.run_polling()
 
 try:

@@ -7,16 +7,6 @@ from config import inspector, engine, wallets
 from model.tables import Base
 from api import get_token_pairs, cryptocurrency_info
 
-def sepatate_command(text):
-    command = ''
-    if "shillmaster" in text:
-        command='shillmaster'
-    elif 'shill' in text:
-        command='shill'
-    param = text.replace(command, '')
-    param = param.strip()
-    return {'command':command, 'param': param}
-
 def format_number_string(number):
     number = float(number)
     final_number = "{:,}".format(int(number))
@@ -129,3 +119,8 @@ def choose_wallet():
     index = random.choice('0123')
     address = wallets[int(index)]
     return address
+
+def get_params(origin_text, command):
+    param = origin_text.replace(command, "")
+    param = param.strip()
+    return param
