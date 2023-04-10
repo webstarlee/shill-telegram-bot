@@ -8,7 +8,7 @@ from telegram.ext import (
 )
 from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from controller.sm_controller import user_shillmaster, get_user_shillmaster, clear_database
+from controller.sm_controller import user_shillmaster, get_user_shillmaster, clear_database, add_warn, remove_warn
 from controller.lb_controller import get_broadcast, token_update, Leaderboard
 from controller.ad_controller import (
     new_advertise,
@@ -58,6 +58,10 @@ async def send_telegram_message(chat_id, text, reply_markup="", disable_preview=
                 parse_mode='HTML'
             )
         return result
+
+async def block_user(user):
+    print("user blocking now")
+    await application.bot.ban_chat_member(chat_id=user.chat_id, user_id=user.user_id)
 
 async def leaderboard():
     check_table_exist()
@@ -392,7 +396,8 @@ async def empty_database(update, context):
 async def user_shill_state(update, context):
     receive_text = update.message.text
     chat_id = update.effective_chat.id
-    param = get_params(receive_text, "/shillmaster@")
+    param = get_params(receive_text, "/shillmaster")
+    param = param.replace("@", "")
     payload_txt = await get_user_shillmaster(param)
     await send_telegram_message(chat_id, payload_txt)
 
@@ -404,10 +409,41 @@ async def user_shill_token(update, context):
     param = get_params(receive_text, "/shill")
     payload = await user_shillmaster(user_id, username, chat_id, param)
     payload_txt = payload['text']
-    is_new = payload['is_new']
-    await send_telegram_message(chat_id, payload_txt)
-    if is_new:
-        await send_telegram_message(leaderboard_id, payload_txt)
+    is_rug = payload['is_rug']
+    if is_rug:
+        user_warn = add_warn(username, user_id, chat_id)
+        text = "@"+username+" warned: "+str(user_warn.count)+" Project Rugged ❌"
+        if user_warn.count > 1:
+            print("block user")
+            text = "@"+username+" Banned: Posted "+str(user_warn.count)+" Rugs ❌"
+            await block_user(user_warn)
+        
+        await send_telegram_message(chat_id, text)
+    else:
+        await send_telegram_message(chat_id, payload_txt)
+        is_new = payload['is_new']
+        if is_new:
+            await send_telegram_message(leaderboard_id, payload_txt)
+
+async def user_warn_remove(update, context):
+    receive_text = update.message.text
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    param = get_params(receive_text, "/removewarning")
+    param = param.replace("@", "")
+    admin_info = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+    is_admin = False
+    if admin_info['status'] == "creator":
+        is_admin = True
+    
+    if is_admin:
+        text = remove_warn(param)
+        await send_telegram_message(chat_id, text)
+    else:
+        text = "Only admin can remove user's warn"
+        await send_telegram_message(chat_id, text)
+
+    print(admin_info['status'])
 
 async def cancel(update, context):
     context.user_data[NEXT] = False
@@ -454,7 +490,11 @@ if __name__ == '__main__':
     application.add_handler(invoice_handler)
     application.add_handler(CommandHandler("emptydb", empty_database))
     application.add_handler(MessageHandler(filters.Regex("/shillmaster@(s)?"), user_shill_state))
+    application.add_handler(MessageHandler(filters.Regex("/shillmaster @(s)?"), user_shill_state))
     application.add_handler(MessageHandler(filters.Regex("/shill0x(s)?"), user_shill_token))
+    application.add_handler(MessageHandler(filters.Regex("/shill 0x(s)?"), user_shill_token))
+    application.add_handler(MessageHandler(filters.Regex("/removewarning@(s)?"), user_warn_remove))
+    application.add_handler(MessageHandler(filters.Regex("/removewarning @(s)?"), user_warn_remove))
     application.run_polling()
 
 try:
