@@ -1,6 +1,6 @@
 import json
 import aiohttp
-from config import cmc_key
+from config import cmc_key, chains
 from helper.tokenPair import TokenPair
 headers = {
         'Accepts': 'application/json',
@@ -41,3 +41,17 @@ async def cryptocurrency_info_ids(ids):
                 return result_array['data']
     except:
         return None
+
+async def go_plus_token_info(token, chain):
+    try:
+        chain_id = chains[chain]
+        go_plus_url = "https://api.gopluslabs.io/api/v1/token_security/"+str(chain_id)+"?contract_addresses="+token
+        async with aiohttp.ClientSession() as session:
+            async with session.get(go_plus_url) as response:
+                data = await response.text()
+                data_array = json.loads(data)
+                lower_token = token.lower()
+
+                return data_array['result'][lower_token]
+    except:
+        return []

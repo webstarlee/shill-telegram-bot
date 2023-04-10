@@ -8,7 +8,8 @@ from helper import (
     return_percent,
     current_marketcap,
     get_token_pairs,
-    cryptocurrency_info
+    cryptocurrency_info,
+    go_plus_token_info
 )
 from helper.emoji import emojis
 
@@ -23,67 +24,85 @@ async def user_shillmaster(user_id, username, chat_id, token):
 
         if pair != None and pair.liquidity.usd > 100:
             if pair.liquidity.usd > 100:
-                bot_txt = ''
-                is_new = True
-                marketcap_info = await cryptocurrency_info(token)
-                circulating_supply = 0
-                marketcap = pair.fdv
-                coin_marketcap_id = None
-                if marketcap_info != None:
-                    for key in marketcap_info:
-                        currency_info = marketcap_info[key]
-                        coin_marketcap_id=currency_info['id']
-                        if currency_info['self_reported_circulating_supply'] != None:
-                            circulating_supply = currency_info['self_reported_circulating_supply']
+                token_info = await go_plus_token_info(token, pair.chain_id)
+                print(token_info['is_honeypot'])
+                if token_info['is_honeypot'] == "0":
+                    bot_txt = ''
+                    is_new = True
+                    marketcap_info = await cryptocurrency_info(token)
+                    circulating_supply = 0
+                    marketcap = pair.fdv
+                    coin_marketcap_id = None
+                    if marketcap_info != None:
+                        for key in marketcap_info:
+                            currency_info = marketcap_info[key]
+                            coin_marketcap_id=currency_info['id']
+                            if currency_info['self_reported_circulating_supply'] != None:
+                                circulating_supply = currency_info['self_reported_circulating_supply']
 
-                if circulating_supply != 0:
-                    marketcap = circulating_supply*pair.price_usd
-                
-                pair_project = db.query(Project).filter(Project.username == username).filter(Project.token == token).first()
-                pair_token = db.query(Pair).filter(Pair.token == token).first()
-                if pair_token != None:
-                    pair_token.marketcap = str(marketcap)
-                    pair_token.updated_at = datetime.now()
-                    db.commit()
-                else:
-                    pair_token = Pair(
-                        token=token,
-                        symbol=pair.base_token.symbol,
-                        pair_url=pair.url,
-                        marketcap=str(marketcap),
-                        coin_market_id=coin_marketcap_id
-                    )
-                    db.add(pair_token)
-                    db.commit()
-
-                if pair_project != None:
-                    is_new = False
-                    if float(marketcap)>float(pair_project.ath_value):
-                        pair_project.ath_value = str(marketcap)
+                    if circulating_supply != 0:
+                        marketcap = circulating_supply*pair.price_usd
+                    
+                    pair_project = db.query(Project).filter(Project.username == username).filter(Project.token == token).first()
+                    pair_token = db.query(Pair).filter(Pair.token == token).first()
+                    if pair_token != None:
+                        pair_token.marketcap = str(marketcap)
+                        pair_token.updated_at = datetime.now()
                         db.commit()
-                    marketcap_percent = marketcap/float(pair_project.marketcap)
-                    bot_txt = emojis['dizzy']+" <a href='"+pair.url+"' >"+pair_project.token_symbol+"</a> Already Shared marketcap: $"+format_number_string(pair_project.marketcap)+"\n"
-                    bot_txt += emojis['point_right']+" Currently: $"+format_number_string(marketcap)+" ("+str(round(marketcap_percent, 2))+"x)\n"
-                    if float(marketcap)< float(pair_project.ath_value):
-                        bot_txt += emojis['point_right']+" ATH: $"+format_number_string(pair_project.ath_value)+" ("+return_percent(pair_project.ath_value, pair_project.marketcap)+"x)\n"
-                    bot_txt += "\n"
+                    else:
+                        pair_token = Pair(
+                            token=token,
+                            symbol=pair.base_token.symbol,
+                            pair_url=pair.url,
+                            marketcap=str(marketcap),
+                            coin_market_id=coin_marketcap_id
+                        )
+                        db.add(pair_token)
+                        db.commit()
+
+                    if pair_project != None:
+                        is_new = False
+                        if float(marketcap)>float(pair_project.ath_value):
+                            pair_project.ath_value = str(marketcap)
+                            db.commit()
+                        marketcap_percent = marketcap/float(pair_project.marketcap)
+                        bot_txt = emojis['dizzy']+" <a href='"+pair.url+"' >"+pair_project.token_symbol+"</a> Already Shared marketcap: $"+format_number_string(pair_project.marketcap)+"\n"
+                        bot_txt += emojis['point_right']+" Currently: $"+format_number_string(marketcap)+" ("+str(round(marketcap_percent, 2))+"x)\n"
+                        if float(marketcap)< float(pair_project.ath_value):
+                            bot_txt += emojis['point_right']+" ATH: $"+format_number_string(pair_project.ath_value)+" ("+return_percent(pair_project.ath_value, pair_project.marketcap)+"x)\n"
+                        bot_txt += "\n"
+                    else:
+                        project = Project(
+                            username=username,
+                            user_id=user_id,
+                            chat_id=chat_id,
+                            url=pair.url,
+                            token=token,
+                            token_symbol=pair.base_token.symbol,
+                            marketcap=marketcap,
+                            ath_value=marketcap
+                        )
+                        db.add(project)
+                        db.commit()
+                        bot_txt = emojis['tada']+" @"+username+" shilled\n"
+                        bot_txt += emojis['point_right']+" "+token+"\n"+emojis['point_right']+" <a href='"+pair.url+"' >" + pair.base_token.symbol+"</a>- Current marketcap: $"+format_number_string(marketcap)
+
+                    return {"text": bot_txt, "is_new": is_new, "is_rug": False}
                 else:
                     project = Project(
                         username=username,
                         user_id=user_id,
                         chat_id=chat_id,
-                        url=pair.url,
+                        url="",
                         token=token,
                         token_symbol=pair.base_token.symbol,
-                        marketcap=marketcap,
-                        ath_value=marketcap
+                        marketcap="",
+                        ath_value="",
+                        status="rugged"
                     )
                     db.add(project)
                     db.commit()
-                    bot_txt = emojis['tada']+" @"+username+" shilled\n"
-                    bot_txt += emojis['point_right']+" "+token+"\n"+emojis['point_right']+" <a href='"+pair.url+"' >" + pair.base_token.symbol+"</a>- Current marketcap: $"+format_number_string(marketcap)
-
-                return {"text": bot_txt, "is_new": is_new, "is_rug": False}
+                    return {"text": "There is no liquidity for this token", "is_new": False, "is_rug": True}
             else:
                 project = Project(
                     username=username,

@@ -3,9 +3,9 @@ import string
 import time
 from hdwallet.symbols import ETH as SYMBOL
 from operator import attrgetter
-from config import inspector, engine, wallets
+from config import inspector, engine, wallet
 from model.tables import Base
-from api import get_token_pairs, cryptocurrency_info
+from api import get_token_pairs, cryptocurrency_info, go_plus_token_info
 
 def format_number_string(number):
     number = float(number)
@@ -119,8 +119,7 @@ def invoice_hash():
     return result
 
 def choose_wallet():
-    index = random.choice('0123')
-    address = wallets[int(index)]
+    address = wallet
     return address
 
 def get_params(origin_text, command):
