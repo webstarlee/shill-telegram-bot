@@ -8,7 +8,7 @@ from telegram.ext import (
 )
 from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from controller.sm_controller import user_shillmaster, get_user_shillmaster, clear_database
+from controller.sm_controller import user_shillmaster, get_user_shillmaster, clear_database, add_warn, remove_warn, get_user_warn
 from controller.lb_controller import get_broadcast, token_update, Leaderboard
 from controller.ad_controller import (
     new_advertise,
@@ -22,7 +22,7 @@ from controller.ad_controller import (
 )
 from config import bot_token, leaderboard_id, Session
 from helper.emoji import emojis
-from helper import sepatate_command, check_table_exist, start_text, convert_am_pm
+from helper import check_table_exist, start_text, convert_am_pm, get_params
 import asyncio
 
 application = ApplicationBuilder().token(bot_token).build()
@@ -59,6 +59,11 @@ async def send_telegram_message(chat_id, text, reply_markup="", disable_preview=
             )
         return result
 
+async def block_user(user):
+    print("user blocking now")
+    await application.bot.ban_chat_member(chat_id=user.chat_id, user_id=user.user_id)
+    remove_warn(user.username)
+
 async def leaderboard():
     check_table_exist()
     while True:
@@ -67,7 +72,7 @@ async def leaderboard():
         black_liquidities = black_list['black_liquidities']
         if len(black_users)>0:
             for user in black_users:
-                await application.bot.ban_chat_member(chat_id=user['group_id'], user_id=user['user_id'])
+                await block_user(user)
         
         if len(black_liquidities)>0:
             for token in black_liquidities:
@@ -389,33 +394,62 @@ async def empty_database(update, context):
     text = "Delete all data from database"
     await send_telegram_message(chat_id, text)
 
-async def shil_command(update, context):
+async def user_shill_state(update, context):
+    receive_text = update.message.text
+    chat_id = update.effective_chat.id
+    param = get_params(receive_text, "/shillmaster")
+    param = param.replace("@", "")
+    payload_txt = await get_user_shillmaster(param)
+    has_warn = get_user_warn(param)
+    if has_warn:
+        payload_txt += "\n\n⚠️Has 1 Warning ⚠️"
+    await send_telegram_message(chat_id, payload_txt, "", True)
+
+async def user_shill_token(update, context):
+    receive_text = update.message.text
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
     username = update.effective_user.username
-
-    receive_text = update.message.text
-    receive_text = receive_text.replace('/', '')
-    command_param = sepatate_command(receive_text)
-    command = command_param['command']
-    param = command_param['param']
-    payload_txt = ""
-    
-    if command == 'shillmaster':
-        payload_txt = emojis['warning']+" Please specify username like below.\n/shillmaster@username\n"
-        if param != '':
-            payload_txt = await get_user_shillmaster(param)
-            await send_telegram_message(chat_id, payload_txt)
-    elif command == 'shill':
-        payload = await user_shillmaster(user_id, username, chat_id, param)
-        payload_txt = payload['text']
-        is_new = payload['is_new']
+    param = get_params(receive_text, "/shill")
+    payload = await user_shillmaster(user_id, username, chat_id, param)
+    payload_txt = payload['text']
+    is_rug = payload['is_rug']
+    if is_rug:
+        user_warn = add_warn(username, user_id, chat_id)
+        text = "@"+username+" warned: "+str(user_warn.count)+" Project Rugged ❌"
+        if user_warn.count > 1:
+            print("block user")
+            text = "@"+username+" Banned: Posted "+str(user_warn.count)+" Rugs ❌"
+            await block_user(user_warn)
+        
+        await send_telegram_message(chat_id, text)
+    else:
         await send_telegram_message(chat_id, payload_txt)
+        is_new = payload['is_new']
         if is_new:
             await send_telegram_message(leaderboard_id, payload_txt)
 
+async def user_warn_remove(update, context):
+    receive_text = update.message.text
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    param = get_params(receive_text, "/removewarning")
+    param = param.replace("@", "")
+    admin_info = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+    is_admin = False
+    if admin_info['status'] == "creator":
+        is_admin = True
+    
+    if is_admin:
+        text = remove_warn(param)
+        await send_telegram_message(chat_id, text)
+    else:
+        text = "Only admin can remove user's warn"
+        await send_telegram_message(chat_id, text)
+
+    print(admin_info['status'])
+
 async def cancel(update, context):
-    """Cancels and ends the conversation."""
     context.user_data[NEXT] = False
     context.user_data['time'] = None
     context.user_data['hours'] = None
@@ -424,9 +458,7 @@ async def cancel(update, context):
     context.user_data['username'] = None
     context.user_data['advertise_id'] = None
     context.user_data['invoice_id'] = None
-    await update.message.reply_text(
-        "Bye! I hope we can talk again some day."
-    )
+    await update.message.reply_text("Bye! I hope we can talk again some day.")
 
     return END
 
@@ -461,7 +493,12 @@ if __name__ == '__main__':
     application.add_handler(ad_handler)
     application.add_handler(invoice_handler)
     application.add_handler(CommandHandler("emptydb", empty_database))
-    application.add_handler(MessageHandler(filters.TEXT, shil_command))
+    application.add_handler(MessageHandler(filters.Regex("/shillmaster@(s)?"), user_shill_state))
+    application.add_handler(MessageHandler(filters.Regex("/shillmaster @(s)?"), user_shill_state))
+    application.add_handler(MessageHandler(filters.Regex("/shill0x(s)?"), user_shill_token))
+    application.add_handler(MessageHandler(filters.Regex("/shill 0x(s)?"), user_shill_token))
+    application.add_handler(MessageHandler(filters.Regex("/removewarning@(s)?"), user_warn_remove))
+    application.add_handler(MessageHandler(filters.Regex("/removewarning @(s)?"), user_warn_remove))
     application.run_polling()
 
 try:

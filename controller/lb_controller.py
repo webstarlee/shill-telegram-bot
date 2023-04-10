@@ -12,12 +12,14 @@ from helper import (
     dex_coin_array
 )
 from api import cryptocurrency_info_ids
+from .sm_controller import add_warn
 import asyncio
 from helper.emoji import emojis
 
 db = Session()
 
 async def token_update():
+    print("-----------------------------------token udpate called")
     black_users=[]
     black_liquidities=[]
     all_pairs = db.query(Pair).all()
@@ -38,14 +40,13 @@ async def token_update():
             for single_key in cap_result:
                 marketcap_results.append(cap_result[single_key])
 
-
     for pair in all_pairs:
         liquidities = [single_dex for single_dex in dex_results if single_dex.base_token.address.lower() == pair.token.lower()]
         market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair.coin_market_id]
 
         if len(liquidities)>0:
             final_pair = max(liquidities, key=attrgetter('liquidity.usd'))
-            if final_pair.liquidity.usd > 0:
+            if final_pair.liquidity.usd > 100:
                 circulating_supply = None
                 now_marketcap = final_pair.fdv
                 if len(market_info)>0:
@@ -63,9 +64,11 @@ async def token_update():
                 projects = db.query(Project).filter(Project.token == pair.token).filter(Project.created_at >= past_thirty_min).all()
                 if projects != None:
                     for project in projects:
-                        black_users.append({"user_id": project.user_id, "group_id": project.chat_id})
-                        db.delete(project)
+                        warn_user = add_warn(project.username, project.user_id, project.chat_id)
+                        project.status = "rugged"
                         db.commit()
+                        if warn_user.count > 1:
+                            black_users.append(warn_user)
                 db.delete(pair)
                 db.commit()
 
@@ -76,9 +79,11 @@ async def token_update():
             projects = db.query(Project).filter(Project.token == pair.token).filter(Project.created_at >= past_thirty_min).all()
             if projects != None:
                 for project in projects:
-                    black_users.append({"user_id": project.user_id, "group_id": project.chat_id})
-                    db.delete(project)
+                    warn_user = add_warn(project.username, project.user_id, project.chat_id)
+                    project.status = "rugged"
                     db.commit()
+                    if warn_user.count > 1:
+                        black_users.append(warn_user)
             db.delete(pair)
             db.commit()
     
@@ -87,9 +92,9 @@ async def token_update():
 def get_broadcast():
     two_week_ago = datetime.utcnow() - timedelta(days=14)
     one_week_ago = datetime.utcnow() - timedelta(days=7)
-    projects_all = db.query(Project).order_by(desc(Project.created_at)).all()
-    projects_two = db.query(Project).filter(Project.created_at >= two_week_ago).order_by(desc(Project.created_at)).all()
-    projects_one = db.query(Project).filter(Project.created_at >= one_week_ago).order_by(desc(Project.created_at)).all()
+    projects_all = db.query(Project).filter(Project.status == "active").order_by(desc(Project.created_at)).all()
+    projects_two = db.query(Project).filter(Project.status == "active").filter(Project.created_at >= two_week_ago).order_by(desc(Project.created_at)).all()
+    projects_one = db.query(Project).filter(Project.status == "active").filter(Project.created_at >= one_week_ago).order_by(desc(Project.created_at)).all()
 
     all_results = order(projects_all)
     two_results = order(projects_two)

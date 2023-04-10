@@ -2,7 +2,7 @@ from operator import attrgetter
 from datetime import datetime
 from sqlalchemy import desc
 from config import Session
-from model.tables import Project, Pair, Leaderboard
+from model.tables import Project, Pair, Leaderboard, Warn
 from helper import (
     format_number_string,
     return_percent,
@@ -18,9 +18,11 @@ async def user_shillmaster(user_id, username, chat_id, token):
     try:
         pairs = await get_token_pairs(token)
         filtered_pairs = [pair for pair in pairs if pair.base_token.address.lower() == token.lower()]
-        if len(filtered_pairs) > 0:
-            pair = max(filtered_pairs, key=attrgetter('liquidity.usd'))
-            if pair.liquidity.usd >0:
+        pair = None
+        if len(filtered_pairs) > 0: pair = max(filtered_pairs, key=attrgetter('liquidity.usd'))
+
+        if pair != None and pair.liquidity.usd > 100:
+            if pair.liquidity.usd > 100:
                 bot_txt = ''
                 is_new = True
                 marketcap_info = await cryptocurrency_info(token)
@@ -80,15 +82,69 @@ async def user_shillmaster(user_id, username, chat_id, token):
                     db.commit()
                     bot_txt = emojis['tada']+" @"+username+" shilled\n"
                     bot_txt += emojis['point_right']+" "+token+"\n"+emojis['point_right']+" <a href='"+pair.url+"' >" + pair.base_token.symbol+"</a>- Current marketcap: $"+format_number_string(marketcap)
-    
-                return {"text": bot_txt, "is_new": is_new}
+
+                return {"text": bot_txt, "is_new": is_new, "is_rug": False}
             else:
-                return {"text": "There is no liquidity for this token", "is_new": False}
+                project = Project(
+                    username=username,
+                    user_id=user_id,
+                    chat_id=chat_id,
+                    url="",
+                    token=token,
+                    token_symbol=pair.base_token.symbol,
+                    marketcap="",
+                    ath_value="",
+                    status="rugged"
+                )
+                db.add(project)
+                db.commit()
+                return {"text": "There is no liquidity for this token", "is_new": False, "is_rug": True}
+
         else:
-            return {"text": "There is no liquidity for this token", "is_new": False}
+            return {"text": "There is no liquidity for this token", "is_new": False, "is_rug": True}
     except:
         bot_txt="There is no liquidity for this token"
-        return {"text": bot_txt, "is_new": False}
+        return {"text": bot_txt, "is_new": False, "is_rug": True}
+
+def add_warn(username, user_id, chat_id):
+    print("add warn user")
+    warn_user = db.query(Warn).filter(Warn.username == username).first()
+    if warn_user != None:
+        current_count = warn_user.count
+        current_count = int(current_count)+1
+        warn_user.count = current_count
+        db.commit()
+    else:
+        warn_user = Warn(
+            username=username,
+            user_id=user_id,
+            chat_id=chat_id,
+            count=1
+        )
+        db.add(warn_user)
+        db.commit()
+    
+    return warn_user
+
+def remove_warn(username):
+    warn_user = db.query(Warn).filter(Warn.username == username).first()
+    text = ""
+    if warn_user != None:
+        db.delete(warn_user)
+        db.commit()
+        text = "Warning removed from @"+username+" ✅"
+    else:
+        text = "There is no warn for @"+username+" ✅"
+    
+    return text
+
+def get_user_warn(username):
+    warn_user = db.query(Warn).filter(Warn.username == username).first()
+    has_warn = False
+    if warn_user != None:
+        has_warn = True
+    
+    return has_warn
 
 async def get_user_shillmaster(user):
     return_txt = "❗ There is not any shill yet for "+user
@@ -98,15 +154,21 @@ async def get_user_shillmaster(user):
         return_txt = emojis['frog']+" Shillmaster stats for "+user+" "+emojis['frog']+"\n\n"
         for project in user_shills:
             return_txt += emojis['frog']+" <a href='"+project.url+"' >"+project.token_symbol+"</a> Shared marketcap: $"+format_number_string(project.marketcap)+"\n"
-            current_info = await current_marketcap(project)
-            if float(current_info['marketcap'])>float(project.ath_value):
-                project.ath_value = current_info['marketcap']
-                db.commit()
-            if current_info['is_liquidity']:
-                return_txt += emojis['point_right']+" Currently: $"+format_number_string(current_info['marketcap'])+" ("+str(round(current_info['percent'], 2))+"x)\n"
-                if float(current_info['marketcap'])< float(project.ath_value):
-                    return_txt += emojis['point_right']+" ATH: $"+format_number_string(project.ath_value)+" ("+return_percent(project.ath_value, project.marketcap)+"x)\n"
-                return_txt += "\n"
+            if project.status == "active":
+                current_info = await current_marketcap(project)
+                
+                if current_info['is_liquidity']:
+                    if float(current_info['marketcap'])>float(project.ath_value):
+                        project.ath_value = current_info['marketcap']
+                        db.commit()
+                    return_txt += emojis['point_right']+" Currently: $"+format_number_string(current_info['marketcap'])+" ("+str(round(current_info['percent'], 2))+"x)\n"
+                    if float(current_info['marketcap'])< float(project.ath_value):
+                        return_txt += emojis['point_right']+" ATH: $"+format_number_string(project.ath_value)+" ("+return_percent(project.ath_value, project.marketcap)+"x)\n"
+                    return_txt += "\n"
+                else:
+                    project.status = "rugged"
+                    db.commit()
+                    return_txt += "Currently: LIQUIDITY REMOVED / HONEYPOT"
             else:
                 return_txt += "Currently: LIQUIDITY REMOVED / HONEYPOT"
 

@@ -7,16 +7,6 @@ from config import inspector, engine, wallets
 from model.tables import Base
 from api import get_token_pairs, cryptocurrency_info
 
-def sepatate_command(text):
-    command = ''
-    if "shillmaster" in text:
-        command='shillmaster'
-    elif 'shill' in text:
-        command='shill'
-    param = text.replace(command, '')
-    param = param.strip()
-    return {'command':command, 'param': param}
-
 def format_number_string(number):
     number = float(number)
     final_number = "{:,}".format(int(number))
@@ -34,19 +24,22 @@ async def current_marketcap(project):
         filtered_pairs = [pair for pair in pairs if pair.base_token.address.lower() == project.token.lower()]
         if len(filtered_pairs)>0:
             pair = max(filtered_pairs, key=attrgetter('liquidity.usd'))
-            marketcap_info = await cryptocurrency_info(project.token)
-            circulating_supply = 0
-            marketcap = pair.fdv
-            if marketcap_info != None:
-                for key in marketcap_info:
-                    currency_info = marketcap_info[key]
-                    if currency_info['self_reported_circulating_supply'] != None:
-                        circulating_supply = currency_info['self_reported_circulating_supply']
-            if circulating_supply != 0:
-                marketcap = circulating_supply*pair.price_usd
+            if pair.liquidity.usd > 100:
+                marketcap_info = await cryptocurrency_info(project.token)
+                circulating_supply = 0
+                marketcap = pair.fdv
+                if marketcap_info != None:
+                    for key in marketcap_info:
+                        currency_info = marketcap_info[key]
+                        if currency_info['self_reported_circulating_supply'] != None:
+                            circulating_supply = currency_info['self_reported_circulating_supply']
+                if circulating_supply != 0:
+                    marketcap = circulating_supply*pair.price_usd
 
-            marketcap_percent = marketcap/float(project.marketcap)
-            return {"is_liquidity": True, "marketcap": marketcap, "percent": marketcap_percent}
+                marketcap_percent = marketcap/float(project.marketcap)
+                return {"is_liquidity": True, "marketcap": marketcap, "percent": marketcap_percent}
+            else:
+                return {"is_liquidity": False}
         else:
             return {"is_liquidity":False}
     except:
@@ -129,3 +122,8 @@ def choose_wallet():
     index = random.choice('0123')
     address = wallets[int(index)]
     return address
+
+def get_params(origin_text, command):
+    param = origin_text.replace(command, "")
+    param = param.strip()
+    return param

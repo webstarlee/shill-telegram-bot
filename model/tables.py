@@ -16,6 +16,7 @@ class Project(Base):
     token_symbol = Column(String)
     marketcap = Column(String)
     ath_value = Column(String)
+    status = Column(String, default="active")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
@@ -84,8 +85,9 @@ class Warn(Base):
 
     id = Column(Integer, primary_key=True)
     username = Column(String, nullable=False)
+    user_id = Column(String, nullable=False)
+    chat_id = Column(String, nullable=False)
     count = Column(Integer, nullable=False)
-    tokens = Column(String, nullable=False)
     created_at=Column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
