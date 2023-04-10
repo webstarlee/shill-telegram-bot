@@ -130,19 +130,21 @@ def remove_warn(username):
     warn_user = db.query(Warn).filter(Warn.username == username).first()
     text = ""
     if warn_user != None:
-        current_count = warn_user.count
-        if current_count > 0:
-            current_count = int(current_count)-1
-            warn_user.count = current_count
-            db.commit()
-        if warn_user.count == 0:
-            db.delete(warn_user)
-            db.commit()
+        db.delete(warn_user)
+        db.commit()
         text = "Warning removed from @"+username+" ✅"
     else:
         text = "There is no warn for @"+username+" ✅"
     
     return text
+
+def get_user_warn(username):
+    warn_user = db.query(Warn).filter(Warn.username == username).first()
+    has_warn = False
+    if warn_user != None:
+        has_warn = True
+    
+    return has_warn
 
 async def get_user_shillmaster(user):
     return_txt = "❗ There is not any shill yet for "+user
@@ -152,15 +154,21 @@ async def get_user_shillmaster(user):
         return_txt = emojis['frog']+" Shillmaster stats for "+user+" "+emojis['frog']+"\n\n"
         for project in user_shills:
             return_txt += emojis['frog']+" <a href='"+project.url+"' >"+project.token_symbol+"</a> Shared marketcap: $"+format_number_string(project.marketcap)+"\n"
-            current_info = await current_marketcap(project)
-            if float(current_info['marketcap'])>float(project.ath_value):
-                project.ath_value = current_info['marketcap']
-                db.commit()
-            if current_info['is_liquidity']:
-                return_txt += emojis['point_right']+" Currently: $"+format_number_string(current_info['marketcap'])+" ("+str(round(current_info['percent'], 2))+"x)\n"
-                if float(current_info['marketcap'])< float(project.ath_value):
-                    return_txt += emojis['point_right']+" ATH: $"+format_number_string(project.ath_value)+" ("+return_percent(project.ath_value, project.marketcap)+"x)\n"
-                return_txt += "\n"
+            if project.status == "active":
+                current_info = await current_marketcap(project)
+                
+                if current_info['is_liquidity']:
+                    if float(current_info['marketcap'])>float(project.ath_value):
+                        project.ath_value = current_info['marketcap']
+                        db.commit()
+                    return_txt += emojis['point_right']+" Currently: $"+format_number_string(current_info['marketcap'])+" ("+str(round(current_info['percent'], 2))+"x)\n"
+                    if float(current_info['marketcap'])< float(project.ath_value):
+                        return_txt += emojis['point_right']+" ATH: $"+format_number_string(project.ath_value)+" ("+return_percent(project.ath_value, project.marketcap)+"x)\n"
+                    return_txt += "\n"
+                else:
+                    project.status = "rugged"
+                    db.commit()
+                    return_txt += "Currently: LIQUIDITY REMOVED / HONEYPOT"
             else:
                 return_txt += "Currently: LIQUIDITY REMOVED / HONEYPOT"
 

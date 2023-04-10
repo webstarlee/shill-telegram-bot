@@ -8,7 +8,7 @@ from telegram.ext import (
 )
 from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from controller.sm_controller import user_shillmaster, get_user_shillmaster, clear_database, add_warn, remove_warn
+from controller.sm_controller import user_shillmaster, get_user_shillmaster, clear_database, add_warn, remove_warn, get_user_warn
 from controller.lb_controller import get_broadcast, token_update, Leaderboard
 from controller.ad_controller import (
     new_advertise,
@@ -62,6 +62,7 @@ async def send_telegram_message(chat_id, text, reply_markup="", disable_preview=
 async def block_user(user):
     print("user blocking now")
     await application.bot.ban_chat_member(chat_id=user.chat_id, user_id=user.user_id)
+    remove_warn(user.username)
 
 async def leaderboard():
     check_table_exist()
@@ -71,7 +72,7 @@ async def leaderboard():
         black_liquidities = black_list['black_liquidities']
         if len(black_users)>0:
             for user in black_users:
-                await application.bot.ban_chat_member(chat_id=user['group_id'], user_id=user['user_id'])
+                await block_user(user)
         
         if len(black_liquidities)>0:
             for token in black_liquidities:
@@ -399,7 +400,10 @@ async def user_shill_state(update, context):
     param = get_params(receive_text, "/shillmaster")
     param = param.replace("@", "")
     payload_txt = await get_user_shillmaster(param)
-    await send_telegram_message(chat_id, payload_txt)
+    has_warn = get_user_warn(param)
+    if has_warn:
+        payload_txt += "\n\n⚠️Has 1 Warning ⚠️"
+    await send_telegram_message(chat_id, payload_txt, "", True)
 
 async def user_shill_token(update, context):
     receive_text = update.message.text
