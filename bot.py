@@ -398,7 +398,7 @@ async def user_shill_state(update, context):
     payload_txt = await get_user_shillmaster(param)
     has_warn = get_user_warn(param)
     if has_warn:
-        payload_txt += "\n\n⚠️Has 1 Warning ⚠️"
+        payload_txt += "\n⚠️ Has 1 Warning ⚠️"
     await send_telegram_message(chat_id, payload_txt, "", True)
 
 async def user_shill_token(update, context):

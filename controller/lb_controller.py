@@ -6,7 +6,6 @@ from model.tables import Project, Pair, Leaderboard
 from helper.shill import Shill
 from helper import (
     format_number_string,
-    current_marketcap,
     return_percent,
     get_token_pairs,
     dex_coin_array

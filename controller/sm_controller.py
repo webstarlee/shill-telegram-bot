@@ -6,7 +6,7 @@ from model.tables import Project, Pair, Leaderboard, Warn
 from helper import (
     format_number_string,
     return_percent,
-    current_marketcap,
+    current_status,
     get_token_pairs,
     cryptocurrency_info,
     go_plus_token_info
@@ -180,11 +180,11 @@ async def get_user_shillmaster(user):
     username = user.replace("@", "")
     user_shills = db.query(Project).filter(Project.username == username).order_by(desc(Project.created_at)).limit(5).all()
     if len(user_shills)>0:
-        return_txt = emojis['frog']+" Shillmaster stats for "+user+" "+emojis['frog']+"\n\n"
+        return_txt = "📊 Shillmaster stats for "+user+" 📊\n\n"
         for project in user_shills:
-            return_txt += emojis['frog']+" <a href='"+project.url+"' >"+project.token_symbol+"</a> Shared marketcap: $"+format_number_string(project.marketcap)+"\n"
             if project.status == "active":
-                current_info = await current_marketcap(project)
+                return_txt += "💰 <a href='"+project.url+"' >"+project.token_symbol+"</a> Shared marketcap: $"+format_number_string(project.marketcap)+"\n"
+                current_info = await current_status(project)
                 
                 if current_info['is_liquidity']:
                     if float(current_info['marketcap'])>float(project.ath_value):
@@ -192,14 +192,26 @@ async def get_user_shillmaster(user):
                         db.commit()
                     return_txt += emojis['point_right']+" Currently: $"+format_number_string(current_info['marketcap'])+" ("+str(round(current_info['percent'], 2))+"x)\n"
                     if float(current_info['marketcap'])< float(project.ath_value):
-                        return_txt += emojis['point_right']+" ATH: $"+format_number_string(project.ath_value)+" ("+return_percent(project.ath_value, project.marketcap)+"x)\n"
+                        return_txt += "🏆 ATH: $"+format_number_string(project.ath_value)+" ("+return_percent(project.ath_value, project.marketcap)+"x)\n"
                     return_txt += "\n"
                 else:
-                    project.status = "rugged"
-                    db.commit()
-                    return_txt += "Currently: LIQUIDITY REMOVED / HONEYPOT"
-            else:
-                return_txt += "Currently: LIQUIDITY REMOVED / HONEYPOT"
+                    is_warn = current_info['is_warn']
+                    if is_warn:
+                        add_warn(username, project.user_id, project.chat_id)
+                    return_txt += emojis['point_right']+"Currently: LIQUIDITY REMOVED\n\n"
+            
+            if project.status == "removed":
+                return_txt += "💰 <a href='"+project.url+"' >"+project.token_symbol+"</a> Shared marketcap: $"+format_number_string(project.marketcap)+"\n"
+                return_txt += "⚠️ Currently: LIQUIDITY REMOVED\n\n"
+                return_txt += "🏆 ATH: $"+format_number_string(project.ath_value)+" ("+return_percent(project.ath_value, project.marketcap)+"x)\n\n"
+            
+            if project.status == "no_liquidity":
+                return_txt += "💰 <a href='"+project.url+"' >"+project.token_symbol+"</a> has no Liquidity\n"
+                return_txt += "⚠️ Got Warn with this token\n\n"
+            
+            if project.status == "honeypot":
+                return_txt += "💰 <a href='"+project.url+"' >"+project.token_symbol+"</a> look like Honeypot\n"
+                return_txt += "⚠️ Got Warn with this token\n\n"
 
     return return_txt
 
