@@ -2,7 +2,7 @@ from model.tables import Advertise, Invoice
 from datetime import datetime, timedelta
 from sqlalchemy import or_
 from config import Session, eth_url, bsc_url, api_key
-from helper import choose_wallet, invoice_hash
+from helper import choose_wallet, invoice_hash, get_time_delta
 from web3 import Web3
 from moralis import evm_api
 
@@ -56,7 +56,7 @@ def check_available_time():
         number_array.append(time_number)
 
     print(number_array)
-    advertises = db.query(Advertise).filter(Advertise.start <= end_time).filter(Advertise.end >= start_time).all()
+    advertises = db.query(Advertise).filter(Advertise.start <= end_time).filter(Advertise.end >= start_time).filter(Advertise.paid == True).all()
 
     db_number_array = []
     if advertises != None:
@@ -64,8 +64,8 @@ def check_available_time():
             # db_start_time = datetime.strptime(advertise.start, "%d/%m/%Y %H")
             # db_end_time = datetime.strptime(advertise.end, "%d/%m/%Y %H")
             db_number_start = int(advertise.start.strftime('%H'))
-            print(db_number_start)
-            
+            if db_number_start == 0:
+                db_number_start = 24
             delta = advertise.end-advertise.start
             delta_hour = delta.seconds/3600
             db_number_end = db_number_start+int(delta_hour)
@@ -87,7 +87,7 @@ def check_available_hour(time):
     current_date_str = datetime.utcnow().strftime('%d/%m/%Y')
     current_date = datetime.strptime(current_date_str, "%d/%m/%Y")
     end_time = current_date+timedelta(hours=time)
-    advertises = db.query(Advertise).filter(Advertise.start >= end_time).all()
+    advertises = db.query(Advertise).filter(Advertise.start >= end_time).filter(Advertise.paid == True).all()
     origin_array = [2,4,8,12,24]
     if advertises != None:
         for advertise in advertises:
@@ -148,6 +148,17 @@ def edit_advertise(data):
 
 def get_active_advertise():
     now_time = datetime.utcnow()
+    clear_unpaid_advertise()
     advertise = db.query(Advertise).filter(Advertise.start <= now_time).filter(Advertise.end >= now_time).filter(Advertise.paid == True).first()
 
     return advertise
+
+def clear_unpaid_advertise():
+    now_time = datetime.utcnow()
+    advertises = db.query(Advertise).filter(Advertise.paid == False).all()
+    if advertises != None and len(advertises)>0:
+        for advertise in advertises:
+            delta = get_time_delta(advertise.created_at, now_time)
+            if int(delta) > 30:
+                db.delete(advertise)
+                db.commit()
