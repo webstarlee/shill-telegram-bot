@@ -29,9 +29,6 @@ application = ApplicationBuilder().token(bot_token).build()
 db = Session()
 NEXT = map(chr, range(10, 22))
 SHOW_HOUR, SHOW_TIME = map(chr, range(8, 10))
-FINAL = map(chr, range(8, 10))
-ASK_TEXT = map(chr, range(8, 10))
-ASK_URL = map(chr, range(8, 10))
 TEXT_TYPING = map(chr, range(8, 10))
 URL_TYPING = map(chr, range(8, 10))
 COOSE_TOKEN = map(chr, range(8, 10))
@@ -332,7 +329,6 @@ async def payment(update, context):
 
 async def invoice(update, context):
     chat_id = update.effective_chat.id
-    print("invoice")
     text = "Please Enter your invoice ID\n"
     await send_telegram_message(chat_id, text, "", True)
 
@@ -411,23 +407,23 @@ async def user_shill_token(update, context):
     user_id = update.effective_user.id
     username = update.effective_user.username
     param = get_params(receive_text, "/shill")
-    payload = await user_shillmaster(user_id, username, chat_id, param)
-    payload_txt = payload['text']
-    is_rug = payload['is_rug']
+    response = await user_shillmaster(user_id, username, chat_id, param)
+    is_rug = response['is_rug']
     if is_rug:
         user_warn = add_warn(username, user_id, chat_id)
-        text = "@"+username+" warned: "+str(user_warn.count)+" Project Rugged ❌"
+        text = response['text'] + "\n\n@"+username+" warned: "+str(user_warn.count)+" Project Rugged ❌"
         if user_warn.count > 1:
-            print("block user")
-            text = "@"+username+" Banned: Posted "+str(user_warn.count)+" Rugs ❌"
+            text = response['text'] + "\n\n@"+username+" Banned: Posted "+str(user_warn.count)+" Rugs ❌"
             await block_user(user_warn)
         
-        await send_telegram_message(chat_id, text)
-    else:
-        await send_telegram_message(chat_id, payload_txt)
-        is_new = payload['is_new']
-        if is_new:
-            await send_telegram_message(leaderboard_id, payload_txt)
+        return await send_telegram_message(chat_id, text)
+
+    payload_txt = response['text']
+    is_new = response['is_new']
+    if is_new:
+        await send_telegram_message(leaderboard_id, payload_txt)
+    
+    return await send_telegram_message(chat_id, payload_txt)
 
 async def user_warn_remove(update, context):
     receive_text = update.message.text
