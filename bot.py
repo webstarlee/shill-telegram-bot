@@ -146,7 +146,7 @@ async def leaderboard():
                         broadcast.message_id = result['message_id']
                         db.commit()
 
-        await asyncio.sleep(300)
+        await asyncio.sleep(50)
 
 async def start(update, context):
     chat_id = update.effective_chat.id
