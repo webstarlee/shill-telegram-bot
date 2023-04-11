@@ -526,7 +526,7 @@ if __name__ == '__main__':
     application.add_handler(MessageHandler(filters.Regex("/unban @(s)?"), user_unblock))
     application.run_polling()
 
-# try:
-#     loop.run_until_complete(task)
-# except asyncio.CancelledError:
-#     pass
+try:
+    loop.run_until_complete(task)
+except asyncio.CancelledError:
+    pass
