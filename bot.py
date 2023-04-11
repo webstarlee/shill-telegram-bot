@@ -458,7 +458,7 @@ async def user_warn_remove(update, context):
     receive_text = update.message.text
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    param = get_params(receive_text, "/remove_warn")
+    param = get_params(receive_text, "/remove_warning")
     param = param.replace("@", "")
     admin_info = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
     is_admin = False
@@ -520,8 +520,8 @@ if __name__ == '__main__':
     application.add_handler(MessageHandler(filters.Regex("/shillmaster @(s)?"), user_shill_state))
     application.add_handler(MessageHandler(filters.Regex("/shill0x(s)?"), user_shill_token))
     application.add_handler(MessageHandler(filters.Regex("/shill 0x(s)?"), user_shill_token))
-    application.add_handler(MessageHandler(filters.Regex("/remove_warn@(s)?"), user_warn_remove))
-    application.add_handler(MessageHandler(filters.Regex("/remove_warn @(s)?"), user_warn_remove))
+    application.add_handler(MessageHandler(filters.Regex("/remove_warning@(s)?"), user_warn_remove))
+    application.add_handler(MessageHandler(filters.Regex("/remove_warning @(s)?"), user_warn_remove))
     application.add_handler(MessageHandler(filters.Regex("/unban@(s)?"), user_unblock))
     application.add_handler(MessageHandler(filters.Regex("/unban @(s)?"), user_unblock))
     application.run_polling()
