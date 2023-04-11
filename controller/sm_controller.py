@@ -131,6 +131,7 @@ async def user_shillmaster(user_id, username, chat_id, token):
         return {"is_rug": False, "text": bot_txt, "is_new": is_new}
 
     except:
+
         text="There is no liquidity for this token"
         return {"is_rug": True, "reason": "liquidity", "text": text}
 
