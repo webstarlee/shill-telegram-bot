@@ -92,3 +92,15 @@ class Warn(Base):
 
     def __repr__(self):
         return "<Warn %r>" % self.username
+
+class Ban(Base):
+    __tablename__ = "bans"
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String, nullable=False)
+    user_id = Column(String, nullable=False)
+    chat_id = Column(String, nullable=False)
+    created_at=Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return "<Ban %r>" % self.username

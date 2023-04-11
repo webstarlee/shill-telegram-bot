@@ -2,7 +2,7 @@ from operator import attrgetter
 from datetime import datetime, timedelta
 from sqlalchemy import desc
 from config import Session, leaderboard_id
-from model.tables import Project, Pair, Leaderboard
+from model.tables import Project, Pair, Leaderboard, Ban
 from helper.shill import Shill
 from helper import (
     format_number_string,
@@ -211,3 +211,24 @@ def broadcast_text(results):
                 index +=1
 
     return result_text
+
+def get_baned_user(username):
+    ban_user = db.query(Ban).filter(Ban.username == username).first()
+    return ban_user
+
+def add_ban_user(user):
+    ban_user = db.query(Ban).filter(Ban.username == user.username).first()
+    if ban_user == None:
+        ban_user = Ban(
+            username=user.username,
+            user_id=user.user_id,
+            chat_id=user.chat_id,
+        )
+        db.add(ban_user)
+        db.commit()
+
+def remove_ban_user(user):
+    ban_user = db.query(Ban).filter(Ban.username == user.username).first()
+    if ban_user != None:
+        db.delete(ban_user)
+        db.commit()
