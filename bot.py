@@ -72,8 +72,14 @@ async def leaderboard():
                 await block_user(user)
         
         if len(black_liquidities)>0:
-            for token in black_liquidities:
-                text = "LIQUIDITY REMOVED ❌ "+token
+            for black_liquidity in black_liquidities:
+                text = "<a href='"+black_liquidity['url']+"' >"+black_liquidity['symbol']+"</a> LIQUIDITY REMOVED\n"
+                text += "❌ "+black_liquidity['token']+"\n"
+                if len(black_liquidity['users'])>0:
+                    text += "\nShilled by: "
+                    for black_username in black_liquidity['users']:
+                        text += "@"+black_username+", "
+
                 await send_telegram_message(leaderboard_id, text, "", True)
 
         broadcasts = get_broadcast()

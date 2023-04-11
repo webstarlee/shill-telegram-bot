@@ -67,7 +67,6 @@ async def user_shillmaster(user_id, username, chat_id, token):
             db.commit()
             text = pair.base_token.symbol+" Token look like honeypot"
             return {"is_rug": True, "reason": "honeypot", "text": text}
-        
 
         bot_txt = ''
         is_new = True
