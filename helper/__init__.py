@@ -3,9 +3,12 @@ import string
 import time
 from hdwallet.symbols import ETH as SYMBOL
 from operator import attrgetter
-from config import inspector, engine, wallet
-from model.tables import Base
+from datetime import datetime
+from config import inspector, engine, wallet, Session
+from model.tables import Base, Project
 from api import get_token_pairs, cryptocurrency_info, go_plus_token_info
+
+db = Session()
 
 def format_number_string(number):
     number = float(number)
@@ -18,32 +21,58 @@ def return_percent(first, second):
     percent = first/second
     return str(round(percent, 2))
 
-async def current_marketcap(project):
+def user_rug_check(project, reason):
+    pair_project = db.query(Project).filter(Project.id == project.id).first()
+    is_warn = False
+    if pair_project != None:
+        pair_project.status = reason
+        db.commit()
+        current_time = datetime.utcnow()
+        delta = get_time_delta(current_time, pair_project.created_at)
+        if delta <= 30:
+            is_warn = True
+    
+    return is_warn
+
+async def current_status(project):
     try:
         pairs = await get_token_pairs(project.token)
-        filtered_pairs = [pair for pair in pairs if pair.base_token.address.lower() == project.token.lower()]
+        filtered_pairs = []
+        if len(pairs) > 0:
+            filtered_pairs = [pair for pair in pairs if pair.base_token.address.lower() == project.token.lower()]
+        
+        pair = None
         if len(filtered_pairs)>0:
             pair = max(filtered_pairs, key=attrgetter('liquidity.usd'))
-            if pair.liquidity.usd > 100:
-                marketcap_info = await cryptocurrency_info(project.token)
-                circulating_supply = 0
-                marketcap = pair.fdv
-                if marketcap_info != None:
-                    for key in marketcap_info:
-                        currency_info = marketcap_info[key]
-                        if currency_info['self_reported_circulating_supply'] != None:
-                            circulating_supply = currency_info['self_reported_circulating_supply']
-                if circulating_supply != 0:
-                    marketcap = circulating_supply*pair.price_usd
 
-                marketcap_percent = marketcap/float(project.marketcap)
-                return {"is_liquidity": True, "marketcap": marketcap, "percent": marketcap_percent}
-            else:
-                return {"is_liquidity": False}
-        else:
-            return {"is_liquidity":False}
+        if pair == None:
+            is_warn = user_rug_check(project, 'removed')
+            return {"is_liquidity": False, "is_warn": is_warn}
+        
+        if pair.liquidity.usd <= 100:
+            is_warn = user_rug_check(project, 'removed')
+            return {"is_liquidity": False, "is_warn": is_warn}
+        
+        marketcap_info = await cryptocurrency_info(project.token)
+        circulating_supply = 0
+        marketcap = pair.fdv
+        if marketcap_info != None:
+            for key in marketcap_info:
+                currency_info = marketcap_info[key]
+                if currency_info['self_reported_circulating_supply'] != None:
+                    circulating_supply = currency_info['self_reported_circulating_supply']
+        if circulating_supply != 0:
+            marketcap = circulating_supply*pair.price_usd
+
+        marketcap_percent = marketcap/float(project.marketcap)
+        return {"is_liquidity": True, "marketcap": marketcap, "percent": marketcap_percent}
     except:
-        return {"is_liquidity":False}
+        return {"is_liquidity":False, "is_warn": False}
+
+def get_time_delta(time_one, time_two):
+    delta = time_two-time_one
+    delta_min = delta.seconds/60
+    return delta_min
 
 def dex_coin_array(pairs):
     dex_part_array = []

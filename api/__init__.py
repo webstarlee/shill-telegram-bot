@@ -54,4 +54,4 @@ async def go_plus_token_info(token, chain):
 
                 return data_array['result'][lower_token]
     except:
-        return []
+        return None

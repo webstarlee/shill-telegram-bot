@@ -2,14 +2,14 @@ from operator import attrgetter
 from datetime import datetime, timedelta
 from sqlalchemy import desc
 from config import Session, leaderboard_id
-from model.tables import Project, Pair, Leaderboard
+from model.tables import Project, Pair, Leaderboard, Ban
 from helper.shill import Shill
 from helper import (
     format_number_string,
-    current_marketcap,
     return_percent,
     get_token_pairs,
-    dex_coin_array
+    dex_coin_array,
+    user_rug_check
 )
 from api import cryptocurrency_info_ids
 from .sm_controller import add_warn
@@ -19,7 +19,6 @@ from helper.emoji import emojis
 db = Session()
 
 async def token_update():
-    print("-----------------------------------token udpate called")
     black_users=[]
     black_liquidities=[]
     all_pairs = db.query(Pair).all()
@@ -43,47 +42,41 @@ async def token_update():
     for pair in all_pairs:
         liquidities = [single_dex for single_dex in dex_results if single_dex.base_token.address.lower() == pair.token.lower()]
         market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair.coin_market_id]
-
+        final_pair = None
         if len(liquidities)>0:
             final_pair = max(liquidities, key=attrgetter('liquidity.usd'))
-            if final_pair.liquidity.usd > 100:
-                circulating_supply = None
-                now_marketcap = final_pair.fdv
-                if len(market_info)>0:
-                    circulating_supply = market_info[0]['self_reported_circulating_supply']
-                
-                if circulating_supply != None:
-                    now_marketcap = circulating_supply*final_pair.price_usd
-                
-                pair.marketcap = str(now_marketcap)
-                pair.updated_at = datetime.now()
-                db.commit()
-            else:
-                black_liquidities.append(pair.token)
-                past_thirty_min = datetime.utcnow() - timedelta(minutes=30)
-                projects = db.query(Project).filter(Project.token == pair.token).filter(Project.created_at >= past_thirty_min).all()
-                if projects != None:
-                    for project in projects:
-                        warn_user = add_warn(project.username, project.user_id, project.chat_id)
-                        project.status = "rugged"
-                        db.commit()
-                        if warn_user.count > 1:
-                            black_users.append(warn_user)
-                db.delete(pair)
-                db.commit()
-
+        
+        if final_pair != None and final_pair.liquidity.usd>100:
+            circulating_supply = None
+            now_marketcap = final_pair.fdv
+            if len(market_info)>0:
+                circulating_supply = market_info[0]['self_reported_circulating_supply']
+            
+            if circulating_supply != None:
+                now_marketcap = circulating_supply*final_pair.price_usd
+            
+            pair.marketcap = str(now_marketcap)
+            pair.updated_at = datetime.now()
+            db.commit()
         else:
-            black_liquidities.append(pair.token)
-            # Get User list to kick from Group
-            past_thirty_min = datetime.utcnow() - timedelta(minutes=30)
-            projects = db.query(Project).filter(Project.token == pair.token).filter(Project.created_at >= past_thirty_min).all()
+            projects = db.query(Project).filter(Project.token == pair.token).all()
+            shilled_users = []
             if projects != None:
                 for project in projects:
-                    warn_user = add_warn(project.username, project.user_id, project.chat_id)
-                    project.status = "rugged"
-                    db.commit()
-                    if warn_user.count > 1:
-                        black_users.append(warn_user)
+                    shilled_users.append(project.username)
+                    is_warn = user_rug_check(project, 'removed')
+                    if is_warn:
+                        warn_user = add_warn(project.username, project.user_id, project.chat_id)
+                        if warn_user.count > 1:
+                            black_users.append(warn_user)
+            
+            singl_black_liquidity = {
+                "token": pair.token,
+                "url": pair.pair_url,
+                "symbol": pair.symbol,
+                "users": shilled_users
+            }
+            black_liquidities.append(singl_black_liquidity)
             db.delete(pair)
             db.commit()
     
@@ -218,3 +211,24 @@ def broadcast_text(results):
                 index +=1
 
     return result_text
+
+def get_baned_user(username):
+    ban_user = db.query(Ban).filter(Ban.username == username).first()
+    return ban_user
+
+def add_ban_user(user):
+    ban_user = db.query(Ban).filter(Ban.username == user.username).first()
+    if ban_user == None:
+        ban_user = Ban(
+            username=user.username,
+            user_id=user.user_id,
+            chat_id=user.chat_id,
+        )
+        db.add(ban_user)
+        db.commit()
+
+def remove_ban_user(user):
+    ban_user = db.query(Ban).filter(Ban.username == user.username).first()
+    if ban_user != None:
+        db.delete(ban_user)
+        db.commit()
