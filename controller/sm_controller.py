@@ -175,11 +175,11 @@ def get_user_warn(username):
     return has_warn
 
 async def get_user_shillmaster(user):
-    return_txt = "❗ There is not any shill yet for "+user
+    return_txt = "❗ There is not any shill yet for @"+user
     username = user.replace("@", "")
     user_shills = db.query(Project).filter(Project.username == username).order_by(desc(Project.created_at)).limit(5).all()
     if len(user_shills)>0:
-        return_txt = "📊 Shillmaster stats for "+user+" 📊\n\n"
+        return_txt = "📊 Shillmaster stats for @"+user+" 📊\n\n"
         for project in user_shills:
             if project.status == "active":
                 return_txt += "💰 <a href='"+project.url+"' >"+project.token_symbol+"</a> Shared marketcap: $"+format_number_string(project.marketcap)+"\n"

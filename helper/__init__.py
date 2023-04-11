@@ -112,6 +112,8 @@ def start_text():
     text = " ShillMasterBot Commands: \n\n"
     text += "/shill <contract_address>: Add a project recommendation by providing its contract address; the bot tracks the project's performance since your suggestion.\n\n"
     text += "/shillmaster@Username: View the recommendation history and performance metrics of a specific user.\n\n"
+    text += "/remove_warning@Username: Revoke a user's rug-shilling warning; two warnings result in an automatic group ban.\n\n"
+    text += "/unban@Username: Unban the user who shilled two rugs.\n\n"
     text += "/advertise: Book advertising for your project to be displayed under the leaderboards."
 
     return text
