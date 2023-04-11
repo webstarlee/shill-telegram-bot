@@ -2,6 +2,6 @@ aiohttp==3.8.4
 hdwallet==2.2.1
 moralis==0.1.33
 pydantic==1.10.7
+PyMySQL==1.0.3
 python-telegram-bot==20.2
 SQLAlchemy==2.0.7
-web3==6.1.0

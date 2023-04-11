@@ -1,14 +1,11 @@
 from model.tables import Advertise, Invoice
 from datetime import datetime, timedelta
 from sqlalchemy import or_
-from config import Session, eth_url, bsc_url, api_key
+from config import Session, api_key
 from helper import choose_wallet, invoice_hash, get_time_delta
-from web3 import Web3
 from moralis import evm_api
 
 db = Session()
-eth_web3 = Web3(Web3.HTTPProvider(eth_url))
-bsc_web3 = Web3(Web3.HTTPProvider(bsc_url))
 
 def new_advertise(data):
     selected_time = int(data['time'])

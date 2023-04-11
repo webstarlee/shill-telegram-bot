@@ -74,9 +74,9 @@ async def user_unblock(update, context):
     
     if is_admin:
         baned_user = get_baned_user(param)
-        text = "@"+param+" not banned"
+        text = "@"+param+" is not banned"
         if baned_user != None:
-            text = "@"+baned_user.username+" unbanned now"
+            text = "@"+baned_user.username+" is now unbanned ✅"
             await context.bot.unban_chat_member(chat_id=baned_user.chat_id, user_id=baned_user.user_id)
             remove_ban_user(baned_user)
         return await send_telegram_message(chat_id, text)
@@ -526,7 +526,7 @@ if __name__ == '__main__':
     application.add_handler(MessageHandler(filters.Regex("/unban @(s)?"), user_unblock))
     application.run_polling()
 
-try:
-    loop.run_until_complete(task)
-except asyncio.CancelledError:
-    pass
+# try:
+#     loop.run_until_complete(task)
+# except asyncio.CancelledError:
+#     pass
