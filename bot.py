@@ -8,8 +8,8 @@ from telegram.ext import (
 )
 from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from controller.sm_controller import user_shillmaster, get_user_shillmaster, clear_database, add_warn, remove_warn, get_user_warn
-from controller.lb_controller import get_broadcast, token_update, Leaderboard, add_ban_user, get_baned_user, remove_ban_user
+from controller.sm_controller import user_shillmaster, get_user_shillmaster, add_warn, remove_warn, get_user_warn
+from controller.lb_controller import get_broadcast, token_update, add_ban_user, get_baned_user, remove_ban_user
 from controller.ad_controller import (
     new_advertise,
     check_available_time,
@@ -410,12 +410,6 @@ async def save_url_input(update, context):
     context.user_data['invoice_id'] = None
     return END
 
-async def empty_database(update, context):
-    clear_database()
-    chat_id = update.effective_chat.id
-    text = "Delete all data from database"
-    await send_telegram_message(chat_id, text)
-
 async def user_shill_state(update, context):
     receive_text = update.message.text
     chat_id = update.effective_chat.id
@@ -512,7 +506,6 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler("help", start))
     application.add_handler(ad_handler)
     application.add_handler(invoice_handler)
-    application.add_handler(CommandHandler("emptydb", empty_database))
     application.add_handler(MessageHandler(filters.Regex("/shillmaster@(s)?"), user_shill_state))
     application.add_handler(MessageHandler(filters.Regex("/shillmaster @(s)?"), user_shill_state))
     application.add_handler(MessageHandler(filters.Regex("/shill0x(s)?"), user_shill_token))

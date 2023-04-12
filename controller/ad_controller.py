@@ -19,7 +19,7 @@ def new_advertise(data):
         "start":start_time,
         "end":end_time,
         "paid": False,
-        "created_at": datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
+        "created_at": datetime.utcnow()
     }
     Advertise.insert_one(advertise)
 
@@ -36,7 +36,7 @@ def create_invoice(advertise, symbol, quantity):
         "symbol": symbol,
         "quantity": quantity,
         "paid": False,
-        "created_at": datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
+        "created_at": datetime.utcnow()
     }
     Invoice.insert_one(invoice)
 
@@ -60,12 +60,10 @@ def check_available_time():
     db_number_array = []
     if advertises != None:
         for advertise in advertises:
-            db_start_time = datetime.strptime(advertise['start'], "%d/%m/%Y %H")
-            db_end_time = datetime.strptime(advertise['end'], "%d/%m/%Y %H")
-            db_number_start = int(db_start_time.strftime('%H'))
+            db_number_start = int(advertise['start'].strftime('%H'))
             if db_number_start == 0:
                 db_number_start = 24
-            delta = db_end_time-db_start_time
+            delta = advertise['end']-advertise['start']
             delta_hour = delta.seconds/3600
             db_number_end = db_number_start+int(delta_hour)
             if db_number_end > 24:
@@ -90,8 +88,7 @@ def check_available_hour(time):
     origin_array = [2,4,8,12,24]
     if advertises != None:
         for advertise in advertises:
-            db_start_time = datetime.strptime(advertise['start'], "%d/%m/%Y %H")
-            db_number_start = int(db_start_time.strftime('%H'))
+            db_number_start = int(advertise['start'].strftime('%H'))
             if int(time)+2 > db_number_start:
                 if 2 in origin_array: origin_array.remove(2)
             if int(time)+4 > db_number_start:

@@ -27,8 +27,7 @@ def user_rug_check(project, reason):
     if pair_project != None:
         Project.update_one({"_id": project['_id']}, {"$set":{"reason": reason}})
         current_time = datetime.utcnow()
-        created_at = datetime.strptime(pair_project['created_at'])
-        delta = get_time_delta(current_time, created_at)
+        delta = get_time_delta(current_time, pair_project['created_at'])
         if delta <= 30:
             is_warn = True
     

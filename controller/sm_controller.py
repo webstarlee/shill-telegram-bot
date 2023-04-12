@@ -1,7 +1,6 @@
 from operator import attrgetter
 from datetime import datetime
 from sqlalchemy import desc
-from config import Session
 from model import Project, Pair, Leaderboard, Warn
 from helper import (
     format_number_string,
@@ -12,8 +11,6 @@ from helper import (
     go_plus_token_info
 )
 from helper.emoji import emojis
-
-db = Session()
 
 async def user_shillmaster(user_id, username, chat_id, token):
     try:
@@ -40,7 +37,7 @@ async def user_shillmaster(user_id, username, chat_id, token):
                 "marketcap":"0",
                 "ath_value":"0",
                 "status":"no_liquidity",
-                "created_at": datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
+                "created_at": datetime.utcnow()
             }
             Project.insert_one(project)
             text = "There is no Liquidity for "+pair.base_token.symbol+" Token"
@@ -62,7 +59,7 @@ async def user_shillmaster(user_id, username, chat_id, token):
                 "marketcap":"0",
                 "ath_value":"0",
                 "status":"honeypot",
-                "created_at": datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
+                "created_at": datetime.utcnow()
             }
             Project.insert_one(project)
             text = pair.base_token.symbol+" Token look like honeypot"
@@ -96,7 +93,7 @@ async def user_shillmaster(user_id, username, chat_id, token):
                 "pair_url":pair.url,
                 "marketcap":str(marketcap),
                 "coin_market_id":coin_marketcap_id,
-                "updated_at": datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
+                "updated_at": datetime.utcnow()
             }
             Pair.insert_one(pair_token)
 
@@ -121,7 +118,7 @@ async def user_shillmaster(user_id, username, chat_id, token):
                 "marketcap": marketcap,
                 "ath_value": marketcap,
                 "status": "active",
-                "created_at": datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
+                "created_at": datetime.utcnow()
             }
             Project.insert_one(project)
             bot_txt = emojis['tada']+" @"+username+" shilled\n"
@@ -204,8 +201,3 @@ async def get_user_shillmaster(user):
                 return_txt += "⚠️ Got Warn with this token\n\n"
 
     return return_txt
-
-def clear_database():
-    db.query(Pair).delete()
-    db.query(Project).delete()
-    db.query(Leaderboard).delete()
