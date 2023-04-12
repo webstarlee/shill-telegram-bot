@@ -1,6 +1,5 @@
 from model import Advertise, Invoice
 from datetime import datetime, timedelta
-from sqlalchemy import or_
 from config import api_key
 from helper import choose_wallet, invoice_hash, get_time_delta
 from moralis import evm_api

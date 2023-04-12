@@ -1,6 +1,5 @@
 from operator import attrgetter
 from datetime import datetime, timedelta
-from sqlalchemy import desc
 from config import leaderboard_id
 from model import Project, Pair, Leaderboard, Ban
 from helper.shill import Shill
