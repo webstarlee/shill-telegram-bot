@@ -40,7 +40,7 @@ async def user_shillmaster(user_id, username, chat_id, token):
                 "marketcap":"0",
                 "ath_value":"0",
                 "status":"no_liquidity",
-                "created_at": datetime.utcnow()
+                "created_at": datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
             }
             Project.insert_one(project)
             text = "There is no Liquidity for "+pair.base_token.symbol+" Token"
@@ -62,7 +62,7 @@ async def user_shillmaster(user_id, username, chat_id, token):
                 "marketcap":"0",
                 "ath_value":"0",
                 "status":"honeypot",
-                "created_at": datetime.utcnow()
+                "created_at": datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
             }
             Project.insert_one(project)
             text = pair.base_token.symbol+" Token look like honeypot"
@@ -96,7 +96,7 @@ async def user_shillmaster(user_id, username, chat_id, token):
                 "pair_url":pair.url,
                 "marketcap":str(marketcap),
                 "coin_market_id":coin_marketcap_id,
-                "updated_at": datetime.utcnow()
+                "updated_at": datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
             }
             Pair.insert_one(pair_token)
 
@@ -120,7 +120,8 @@ async def user_shillmaster(user_id, username, chat_id, token):
                 "token_symbol": pair.base_token.symbol,
                 "marketcap": marketcap,
                 "ath_value": marketcap,
-                "created_at": datetime.utcnow()
+                "status": "active",
+                "created_at": datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
             }
             Project.insert_one(project)
             bot_txt = emojis['tada']+" @"+username+" shilled\n"
@@ -135,30 +136,27 @@ async def user_shillmaster(user_id, username, chat_id, token):
 
 def add_warn(username, user_id, chat_id):
     print("add warn user")
-    warn_user = db.query(Warn).filter(Warn.username == username).first()
+    warn_user = Warn.find_one({"username": username})
     if warn_user != None:
-        current_count = warn_user.count
+        current_count = warn_user['count']
         current_count = int(current_count)+1
-        warn_user.count = current_count
-        db.commit()
+        Warn.update_one({"_id": warn_user['_id']}, {"$set": {"count": current_count}})
     else:
-        warn_user = Warn(
-            username=username,
-            user_id=user_id,
-            chat_id=chat_id,
-            count=1
-        )
-        db.add(warn_user)
-        db.commit()
+        warn_user =  {
+            "username": username,
+            "user_id":user_id,
+            "chat_id": chat_id,
+            "count": 1
+        }
+        Warn.insert_one(warn_user)
     
     return warn_user
 
 def remove_warn(username):
-    warn_user = db.query(Warn).filter(Warn.username == username).first()
+    warn_user = Warn.find_one({'username': username})
     text = ""
     if warn_user != None:
-        db.delete(warn_user)
-        db.commit()
+        Warn.find_one_and_delete({"_id": warn_user['_id']})
         text = "Warning removed from @"+username+" ✅"
     else:
         text = "There is no warn for @"+username+" ✅"
@@ -166,49 +164,43 @@ def remove_warn(username):
     return text
 
 def get_user_warn(username):
-    warn_user = db.query(Warn).filter(Warn.username == username).first()
-    has_warn = False
-    if warn_user != None:
-        has_warn = True
-    
-    return has_warn
+    return Warn.find_one({"username": username})
 
 async def get_user_shillmaster(user):
     return_txt = "❗ There is not any shill yet for @"+user
     username = user.replace("@", "")
-    user_shills = db.query(Project).filter(Project.username == username).order_by(desc(Project.created_at)).limit(5).all()
-    if len(user_shills)>0:
+    user_shills = Project.find({"username": username}).sort("created_at", -1).limit(5)
+    if user_shills != None:
         return_txt = "📊 Shillmaster stats for @"+user+" 📊\n\n"
         for project in user_shills:
-            if project.status == "active":
-                return_txt += "💰 <a href='"+project.url+"' >"+project.token_symbol+"</a> Shared marketcap: $"+format_number_string(project.marketcap)+"\n"
+            if project['status'] == "active":
+                return_txt += "💰 <a href='"+project['url']+"' >"+project['token_symbol']+"</a> Shared marketcap: $"+format_number_string(project['marketcap'])+"\n"
                 current_info = await current_status(project)
                 
                 if current_info['is_liquidity']:
-                    if float(current_info['marketcap'])>float(project.ath_value):
-                        project.ath_value = current_info['marketcap']
-                        db.commit()
+                    if float(current_info['marketcap'])>float(project['ath_value']):
+                        Project.update_one({"_id": project['_id']}, {"$set":{"ath_value": current_info['marketcap']}})
                     return_txt += emojis['point_right']+" Currently: $"+format_number_string(current_info['marketcap'])+" ("+str(round(current_info['percent'], 2))+"x)\n"
-                    if float(current_info['marketcap'])< float(project.ath_value):
-                        return_txt += "🏆 ATH: $"+format_number_string(project.ath_value)+" ("+return_percent(project.ath_value, project.marketcap)+"x)\n"
+                    if float(current_info['marketcap'])< float(project['ath_value']):
+                        return_txt += "🏆 ATH: $"+format_number_string(project['ath_value'])+" ("+return_percent(project['ath_value'], project['marketcap'])+"x)\n"
                     return_txt += "\n"
                 else:
                     is_warn = current_info['is_warn']
                     if is_warn:
-                        add_warn(username, project.user_id, project.chat_id)
+                        add_warn(username, project['user_id'], project['chat_id'])
                     return_txt += emojis['point_right']+"Currently: LIQUIDITY REMOVED\n\n"
             
-            if project.status == "removed":
-                return_txt += "💰 <a href='"+project.url+"' >"+project.token_symbol+"</a> Shared marketcap: $"+format_number_string(project.marketcap)+"\n"
+            if project['status'] == "removed":
+                return_txt += "💰 <a href='"+project['url']+"' >"+project['token_symbol']+"</a> Shared marketcap: $"+format_number_string(project['marketcap'])+"\n"
                 return_txt += "⚠️ Currently: LIQUIDITY REMOVED\n\n"
-                return_txt += "🏆 ATH: $"+format_number_string(project.ath_value)+" ("+return_percent(project.ath_value, project.marketcap)+"x)\n\n"
+                return_txt += "🏆 ATH: $"+format_number_string(project['ath_value'])+" ("+return_percent(project['ath_value'], project['marketcap'])+"x)\n\n"
             
-            if project.status == "no_liquidity":
-                return_txt += "💰 <a href='"+project.url+"' >"+project.token_symbol+"</a> has no Liquidity\n"
+            if project['status'] == "no_liquidity":
+                return_txt += "💰 <a href='"+project['url']+"' >"+project['token_symbol']+"</a> has no Liquidity\n"
                 return_txt += "⚠️ Got Warn with this token\n\n"
             
-            if project.status == "honeypot":
-                return_txt += "💰 <a href='"+project.url+"' >"+project.token_symbol+"</a> look like Honeypot\n"
+            if project['status'] == "honeypot":
+                return_txt += "💰 <a href='"+project['url']+"' >"+project['token_symbol']+"</a> look like Honeypot\n"
                 return_txt += "⚠️ Got Warn with this token\n\n"
 
     return return_txt

@@ -22,7 +22,7 @@ from controller.ad_controller import (
 )
 from config import bot_token, leaderboard_id, Session
 from helper.emoji import emojis
-from helper import check_table_exist, start_text, convert_am_pm, get_params
+from helper import start_text, convert_am_pm, get_params
 import asyncio
 
 application = ApplicationBuilder().token(bot_token).build()
@@ -57,9 +57,9 @@ async def send_telegram_message(chat_id, text, reply_markup="", disable_preview=
         return result
 
 async def block_user(user):
-    await application.bot.ban_chat_member(chat_id=user.chat_id, user_id=user.user_id)
+    await application.bot.ban_chat_member(chat_id=user['chat_id'], user_id=user['user_id'])
     add_ban_user(user)
-    remove_warn(user.username)
+    remove_warn(user['username'])
 
 async def user_unblock(update, context):
     receive_text = update.message.text
@@ -85,7 +85,6 @@ async def user_unblock(update, context):
         return await send_telegram_message(chat_id, text)
 
 async def leaderboard():
-    check_table_exist()
     while True:
         black_list = await token_update()
         black_users = black_list['black_users']
@@ -424,7 +423,7 @@ async def user_shill_state(update, context):
     param = param.replace("@", "")
     payload_txt = await get_user_shillmaster(param)
     has_warn = get_user_warn(param)
-    if has_warn:
+    if has_warn != None:
         payload_txt += "\n⚠️ Has 1 Warning ⚠️"
     await send_telegram_message(chat_id, payload_txt, "", True)
 
@@ -438,9 +437,9 @@ async def user_shill_token(update, context):
     is_rug = response['is_rug']
     if is_rug:
         user_warn = add_warn(username, user_id, chat_id)
-        text = response['text'] + "\n\n@"+username+" warned: "+str(user_warn.count)+" Project Rugged ❌"
-        if user_warn.count > 1:
-            text = response['text'] + "\n\n@"+username+" Banned: Posted "+str(user_warn.count)+" Rugs ❌"
+        text = response['text'] + "\n\n@"+username+" warned: "+str(user_warn['count'])+" Project Rugged ❌"
+        if user_warn['count'] > 1:
+            text = response['text'] + "\n\n@"+username+" Banned: Posted "+str(user_warn['count'])+" Rugs ❌"
             await block_user(user_warn)
         
         return await send_telegram_message(chat_id, text)
