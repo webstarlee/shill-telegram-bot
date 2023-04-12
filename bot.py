@@ -8,8 +8,8 @@ from telegram.ext import (
 )
 from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from controller.sm_controller import user_shillmaster, get_user_shillmaster, clear_database, add_warn, remove_warn, get_user_warn
-from controller.lb_controller import get_broadcast, token_update, Leaderboard, add_ban_user, get_baned_user, remove_ban_user
+from controller.sm_controller import user_shillmaster, get_user_shillmaster, add_warn, remove_warn, get_user_warn
+from controller.lb_controller import get_broadcast, token_update, add_ban_user, get_baned_user, remove_ban_user, update_leaderboard
 from controller.ad_controller import (
     new_advertise,
     check_available_time,
@@ -20,13 +20,12 @@ from controller.ad_controller import (
     get_active_advertise,
     get_invoice
 )
-from config import bot_token, leaderboard_id, Session
+from config import bot_token, leaderboard_id
 from helper.emoji import emojis
-from helper import check_table_exist, start_text, convert_am_pm, get_params
+from helper import start_text, convert_am_pm, get_params
 import asyncio
 
 application = ApplicationBuilder().token(bot_token).build()
-db = Session()
 NEXT = map(chr, range(10, 22))
 SHOW_HOUR, SHOW_TIME = map(chr, range(8, 10))
 TEXT_TYPING = map(chr, range(8, 10))
@@ -57,9 +56,9 @@ async def send_telegram_message(chat_id, text, reply_markup="", disable_preview=
         return result
 
 async def block_user(user):
-    await application.bot.ban_chat_member(chat_id=user.chat_id, user_id=user.user_id)
+    await application.bot.ban_chat_member(chat_id=user['chat_id'], user_id=user['user_id'])
     add_ban_user(user)
-    remove_warn(user.username)
+    remove_warn(user['username'])
 
 async def user_unblock(update, context):
     receive_text = update.message.text
@@ -76,8 +75,8 @@ async def user_unblock(update, context):
         baned_user = get_baned_user(param)
         text = "@"+param+" is not banned"
         if baned_user != None:
-            text = "@"+baned_user.username+" is now unbanned ✅"
-            await context.bot.unban_chat_member(chat_id=baned_user.chat_id, user_id=baned_user.user_id)
+            text = "@"+baned_user['username']+" is now unbanned ✅"
+            await context.bot.unban_chat_member(chat_id=baned_user['chat_id'], user_id=baned_user['user_id'])
             remove_ban_user(baned_user)
         return await send_telegram_message(chat_id, text)
     else:
@@ -85,7 +84,6 @@ async def user_unblock(update, context):
         return await send_telegram_message(chat_id, text)
 
 async def leaderboard():
-    check_table_exist()
     while True:
         black_list = await token_update()
         black_users = black_list['black_users']
@@ -110,41 +108,38 @@ async def leaderboard():
         reply_markup=""
         if advertise != None:
             keyboard = [
-                [InlineKeyboardButton(text=emojis['bangbang']+emojis['dog']+" "+advertise.text+" "+emojis['dog']+emojis['bangbang'], url=advertise.url)],
+                [InlineKeyboardButton(text=emojis['bangbang']+emojis['dog']+" "+advertise['text']+" "+emojis['dog']+emojis['bangbang'], url=advertise['url'])],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
         
-        if len(broadcasts)>0:
+        if broadcasts != None:
             for item in broadcasts:
-                broadcast = db.query(Leaderboard).filter(Leaderboard.id == item.id).first()
-                if broadcast != None:
-                    if broadcast.message_id:
-                        try:
-                            if reply_markup =="":
-                                await application.bot.edit_message_text(
-                                    chat_id=broadcast.chat_id,
-                                    message_id=broadcast.message_id,
-                                    text=broadcast.text,
-                                    disable_web_page_preview=True,
-                                    parse_mode='HTML'
-                                )
-                            else:
-                                await application.bot.edit_message_text(
-                                    chat_id=broadcast.chat_id,
-                                    message_id=broadcast.message_id,
-                                    text=broadcast.text,
-                                    disable_web_page_preview=True,
-                                    reply_markup=reply_markup,
-                                    parse_mode='HTML'
-                                )
-                        except:
-                            result = await send_telegram_message(broadcast.chat_id, broadcast.text, reply_markup, True)
-                            broadcast.message_id = result['message_id']
-                            db.commit()
+                if "message_id" in item:
+                    # try:
+                    if reply_markup =="":
+                        await application.bot.edit_message_text(
+                            chat_id=item['chat_id'],
+                            message_id=item['message_id'],
+                            text=item['text'],
+                            disable_web_page_preview=True,
+                            parse_mode='HTML'
+                        )
                     else:
-                        result = await send_telegram_message(broadcast.chat_id, broadcast.text, reply_markup, True)
-                        broadcast.message_id = result['message_id']
-                        db.commit()
+                        await application.bot.edit_message_text(
+                            chat_id=item['chat_id'],
+                            message_id=item['message_id'],
+                            text=item['text'],
+                            disable_web_page_preview=True,
+                            reply_markup=reply_markup,
+                            parse_mode='HTML'
+                        )
+                    # except:
+                    #     result = await send_telegram_message(item.chat_id, item.text, reply_markup, True)
+                    #     item.message_id = result['message_id']
+                    #     db.commit()
+                else:
+                    result = await send_telegram_message(item['chat_id'], item['text'], reply_markup, True)
+                    update_leaderboard(item['_id'], {"message_id": result['message_id']})
 
         await asyncio.sleep(90)
 
@@ -178,7 +173,7 @@ async def show_time(update, context):
                 end_index = len(available_time_list)
                 last_button = [InlineKeyboardButton(text="BACK", callback_data="SHOW_TIME")]
             
-            row = int((len(available_time_list)+1)/2)
+            row = int((end_index-start_index+1)/2)
             total_array = []
             for item in range(start_index, row+start_index):
                 first_num = item
@@ -274,10 +269,8 @@ async def choose_token(update, context):
     keyboard=[]
     await query.answer()
     hours = int(query.data)
-    print("hours: ", hours)
     context.user_data['hours'] = hours
     if hours==2:
-        print("call here 2")
         keyboard = [
             [
                 InlineKeyboardButton(text="0.075 ETH", callback_data="0.075ETH"),
@@ -343,8 +336,8 @@ async def payment(update, context):
         advertise = new_advertise(context.user_data)
         invoice = create_invoice(advertise, symbol, quantity)
 
-        text = "✌ New Invoice ✌\n\nYour Invoice ID is:<pre>"+str(invoice.hash)+"</pre>\n\n"
-        text += "Please send "+str(invoice.quantity)+" "+str(invoice.symbol)+" to\n<pre>"+str(invoice.address)+"</pre>\nwithin 30 minutes\n"
+        text = "✌ New Invoice ✌\n\nYour Invoice ID is:<pre>"+str(invoice['hash'])+"</pre>\n\n"
+        text += "Please send "+str(invoice['quantity'])+" "+str(invoice['symbol'])+" to\n<pre>"+str(invoice['address'])+"</pre>\nwithin 30 minutes\n"
         text += "After completing the payment, kindly enter '/invoice' in the chat to secure your advertisement..\n"
 
         await query.edit_message_text(text=text, parse_mode='HTML')
@@ -369,7 +362,7 @@ async def save_hash_input(update, context):
     invoice = get_invoice(hash, username)
     chat_id = update.effective_chat.id
     if invoice != None:
-        context.user_data['invoice_id'] = invoice.id
+        context.user_data['invoice_id'] = invoice['_id']
         text = "Perfect. Now Please input your transaction ID"
         await context.bot.send_message(chat_id=chat_id, text=text)
         return TRAN_TYPING
@@ -403,8 +396,8 @@ async def save_url_input(update, context):
     context.user_data['url'] = update.message.text
     chat_id = update.effective_chat.id
     advertise = edit_advertise(context.user_data)
-    start_date = advertise.start.strftime('%d/%m/%Y')
-    start_time_str = advertise.start.strftime('%H')
+    start_date = advertise['start'].strftime('%d/%m/%Y')
+    start_time_str = advertise['start'].strftime('%H')
     start_time = convert_am_pm(start_time_str)
     await context.bot.send_message(chat_id=chat_id, text="Ad purchase confirmation✅\nThank you for purchasing an advertisement. Your ad will go live at: "+start_date+" "+start_time)
     context.user_data['text'] = None
@@ -413,12 +406,6 @@ async def save_url_input(update, context):
     context.user_data['invoice_id'] = None
     return END
 
-async def empty_database(update, context):
-    clear_database()
-    chat_id = update.effective_chat.id
-    text = "Delete all data from database"
-    await send_telegram_message(chat_id, text)
-
 async def user_shill_state(update, context):
     receive_text = update.message.text
     chat_id = update.effective_chat.id
@@ -426,7 +413,7 @@ async def user_shill_state(update, context):
     param = param.replace("@", "")
     payload_txt = await get_user_shillmaster(param)
     has_warn = get_user_warn(param)
-    if has_warn:
+    if has_warn != None:
         payload_txt += "\n⚠️ Has 1 Warning ⚠️"
     await send_telegram_message(chat_id, payload_txt, "", True)
 
@@ -440,9 +427,9 @@ async def user_shill_token(update, context):
     is_rug = response['is_rug']
     if is_rug:
         user_warn = add_warn(username, user_id, chat_id)
-        text = response['text'] + "\n\n@"+username+" warned: "+str(user_warn.count)+" Project Rugged ❌"
-        if user_warn.count > 1:
-            text = response['text'] + "\n\n@"+username+" Banned: Posted "+str(user_warn.count)+" Rugs ❌"
+        text = response['text'] + "\n\n@"+username+" warned: "+str(user_warn['count'])+" Project Rugged ❌"
+        if user_warn['count'] > 1:
+            text = response['text'] + "\n\n@"+username+" Banned: Posted "+str(user_warn['count'])+" Rugs ❌"
             await block_user(user_warn)
         
         return await send_telegram_message(chat_id, text)
@@ -515,7 +502,6 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler("help", start))
     application.add_handler(ad_handler)
     application.add_handler(invoice_handler)
-    application.add_handler(CommandHandler("emptydb", empty_database))
     application.add_handler(MessageHandler(filters.Regex("/shillmaster@(s)?"), user_shill_state))
     application.add_handler(MessageHandler(filters.Regex("/shillmaster @(s)?"), user_shill_state))
     application.add_handler(MessageHandler(filters.Regex("/shill0x(s)?"), user_shill_token))

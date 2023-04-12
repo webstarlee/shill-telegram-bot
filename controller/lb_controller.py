@@ -1,8 +1,8 @@
 from operator import attrgetter
 from datetime import datetime, timedelta
 from sqlalchemy import desc
-from config import Session, leaderboard_id
-from model.tables import Project, Pair, Leaderboard, Ban
+from config import leaderboard_id
+from model import Project, Pair, Leaderboard, Ban
 from helper.shill import Shill
 from helper import (
     format_number_string,
@@ -16,13 +16,12 @@ from .sm_controller import add_warn
 import asyncio
 from helper.emoji import emojis
 
-db = Session()
-
 async def token_update():
     black_users=[]
     black_liquidities=[]
-    all_pairs = db.query(Pair).all()
-    dex_coin_results = dex_coin_array(all_pairs)
+    all_pairs = Pair.find()
+    count = Pair.count_documents({})
+    dex_coin_results = dex_coin_array(all_pairs, count)
     dex_array = dex_coin_results['dex_array']
     coin_array = dex_coin_results['coin_array']
 
@@ -40,8 +39,8 @@ async def token_update():
                 marketcap_results.append(cap_result[single_key])
 
     for pair in all_pairs:
-        liquidities = [single_dex for single_dex in dex_results if single_dex.base_token.address.lower() == pair.token.lower()]
-        market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair.coin_market_id]
+        liquidities = [single_dex for single_dex in dex_results if single_dex.base_token.address.lower() == pair['token'].lower()]
+        market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair['coin_market_id']]
         final_pair = None
         if len(liquidities)>0:
             final_pair = max(liquidities, key=attrgetter('liquidity.usd'))
@@ -55,39 +54,36 @@ async def token_update():
             if circulating_supply != None:
                 now_marketcap = circulating_supply*final_pair.price_usd
             
-            pair.marketcap = str(now_marketcap)
-            pair.updated_at = datetime.now()
-            db.commit()
+            Pair.find_one_and_update({"_id": pair['_id']}, {"$set": {"marketcap": now_marketcap, "updated_at": datetime.utcnow()}})
         else:
-            projects = db.query(Project).filter(Project.token == pair.token).all()
+            projects = Project.find({"token": pair['token']})
             shilled_users = []
             if projects != None:
                 for project in projects:
-                    shilled_users.append(project.username)
+                    shilled_users.append(project['username'])
                     is_warn = user_rug_check(project, 'removed')
                     if is_warn:
-                        warn_user = add_warn(project.username, project.user_id, project.chat_id)
-                        if warn_user.count > 1:
+                        warn_user = add_warn(project['username'], project['user_id'], project['chat_id'])
+                        if warn_user['count'] > 1:
                             black_users.append(warn_user)
             
             singl_black_liquidity = {
-                "token": pair.token,
-                "url": pair.pair_url,
-                "symbol": pair.symbol,
+                "token": pair['token'],
+                "url": pair['pair_url'],
+                "symbol": pair['symbol'],
                 "users": shilled_users
             }
             black_liquidities.append(singl_black_liquidity)
-            db.delete(pair)
-            db.commit()
+            Pair.find_one_and_delete({'_id': pair['_id']})
     
     return {"black_users": black_users, "black_liquidities": black_liquidities }
 
 def get_broadcast():
     two_week_ago = datetime.utcnow() - timedelta(days=14)
     one_week_ago = datetime.utcnow() - timedelta(days=7)
-    projects_all = db.query(Project).filter(Project.status == "active").order_by(desc(Project.created_at)).all()
-    projects_two = db.query(Project).filter(Project.status == "active").filter(Project.created_at >= two_week_ago).order_by(desc(Project.created_at)).all()
-    projects_one = db.query(Project).filter(Project.status == "active").filter(Project.created_at >= one_week_ago).order_by(desc(Project.created_at)).all()
+    projects_all = Project.find({"status": "active"}).sort("created_at", -1)
+    projects_two = Project.find({"status": "active", "created_at": {"$gte": two_week_ago}}).sort("created_at", -1)
+    projects_one = Project.find({"status": "active", "created_at": {"$gte": one_week_ago}}).sort("created_at", -1)
 
     all_results = order(projects_all)
     two_results = order(projects_two)
@@ -97,49 +93,37 @@ def get_broadcast():
     two_text = "TOP 10 SHILLERS PAST 2 WEEKS\n\n" + broadcast_text(two_results)
     one_text = "TOP 10 SHILLERS PAST WEEK\n\n" + broadcast_text(one_results)
 
-    broadcasting_leaderboards = []
-    all_time_leaderbard = db.query(Leaderboard).filter(Leaderboard.type == 'all').first()
+    leaderboard_dbs = []
+    all_time_leaderbard = Leaderboard.find_one({"type": "all"})
     if all_time_leaderbard != None:
-        if all_time_leaderbard.text != all_text:
-            all_time_leaderbard.text = all_text
-            db.commit()
-            broadcasting_leaderboards.append(all_time_leaderbard)
+        if all_time_leaderbard['text'] != all_text:
+            update_leaderboard(all_time_leaderbard['_id'], {"text": all_text})
     else:
-        all_time_leaderbard = Leaderboard(type="all", chat_id=leaderboard_id, text=all_text)
-        db.add(all_time_leaderbard)
-        db.commit()
+        all_time_leaderbard = {"type": "all", "chat_id": leaderboard_id, "text": all_text}
+        leaderboard_dbs.append(all_time_leaderbard)
 
-        broadcasting_leaderboards.append(all_time_leaderbard)
-    
-    two_week_leaderbard = db.query(Leaderboard).filter(Leaderboard.type == 'two').first()
+    two_week_leaderbard = Leaderboard.find_one({"type": "two"})
     if two_week_leaderbard != None:
-        if two_week_leaderbard.text != two_text:
-            two_week_leaderbard.text = two_text
-            db.commit()
-            broadcasting_leaderboards.append(two_week_leaderbard)
+        if two_week_leaderbard['text'] != two_text:
+            update_leaderboard(two_week_leaderbard['_id'], {"text": two_text})
     else:
-        two_week_leaderbard = Leaderboard(type="two", chat_id=leaderboard_id, text=two_text)
-        db.add(two_week_leaderbard)
-        db.commit()
-
-        broadcasting_leaderboards.append(two_week_leaderbard)
+        two_week_leaderbard = {"type": "two", "chat_id": leaderboard_id, "text": two_text}
+        leaderboard_dbs.append(two_week_leaderbard)
     
-
-    one_week_leaderbard = db.query(Leaderboard).filter(Leaderboard.type == 'one').first()
+    one_week_leaderbard = Leaderboard.find_one({"type": "one"})
     if one_week_leaderbard != None:
-        if one_week_leaderbard.text != one_text:
-            one_week_leaderbard.text = one_text
-            db.commit()
-            broadcasting_leaderboards.append(one_week_leaderbard)
+        if one_week_leaderbard['text'] != one_text:
+            update_leaderboard(one_week_leaderbard['_id'], {"text": one_text})
     else:
-        one_week_leaderbard = Leaderboard(type="one", chat_id=leaderboard_id, text=one_text)
-        db.add(one_week_leaderbard)
-        db.commit()
+        one_week_leaderbard = {"type": "one", "chat_id": leaderboard_id, "text": one_text}
+        leaderboard_dbs.append(one_week_leaderbard)
 
-        broadcasting_leaderboards.append(one_week_leaderbard)
+    if len(leaderboard_dbs) > 0:
+        Leaderboard.insert_many(leaderboard_dbs)
 
-    
-    return broadcasting_leaderboards
+    broadcasting_data = Leaderboard.find()
+
+    return broadcasting_data
 
 def order(projects):
     users = []
@@ -147,26 +131,25 @@ def order(projects):
     shill_details = []
     result = []
     for project in projects:
-        if not project.username in users:
-            users.append(project.username)
-        
-        information = db.query(Pair).filter(Pair.token == project.token).first()
+        if not project['username'] in users:
+            users.append(project['username'])
+
+        information = Pair.find_one({"token": project['token']})
         
         if information != None:
-            if float(information.marketcap)>float(project.ath_value):
-                project.ath_value = information.marketcap
-                db.commit()
+            if float(information['marketcap'])>float(project['ath_value']):
+                Project.find_one_and_update({"_id": project['_id']}, {"$set": {"ath_value": information['marketcap']}})
 
             user_shill = {
-                "username": project.username,
-                "token": project.token,
-                "url": project.url,
-                "symbol": project.token_symbol,
-                "marketcap": str(project.marketcap),
-                "ath": str(project.ath_value),
-                "created_at": str(project.created_at),
-                "current_marketcap": information.marketcap,
-                "percent": return_percent(information.marketcap, project.marketcap)
+                "username": project['username'],
+                "token": project['token'],
+                "url": project['url'],
+                "symbol": project['token_symbol'],
+                "marketcap": str(project['marketcap']),
+                "ath": str(project['ath_value']),
+                "created_at": str(project['created_at']),
+                "current_marketcap": information['marketcap'],
+                "percent": return_percent(information['marketcap'], project['marketcap'])
             }
             shills.append(user_shill)
     
@@ -213,22 +196,20 @@ def broadcast_text(results):
     return result_text
 
 def get_baned_user(username):
-    ban_user = db.query(Ban).filter(Ban.username == username).first()
-    return ban_user
+    return Ban.find_one({'username': username})
 
 def add_ban_user(user):
-    ban_user = db.query(Ban).filter(Ban.username == user.username).first()
+    ban_user = Ban.find_one({"username": user['username']})
     if ban_user == None:
-        ban_user = Ban(
-            username=user.username,
-            user_id=user.user_id,
-            chat_id=user.chat_id,
-        )
-        db.add(ban_user)
-        db.commit()
+        ban_user = {
+            "username": user['username'],
+            "user_id": user['user_id'],
+            "chat_id": user['chat_id'],
+        }
+        Ban.insert_one(ban_user)
 
 def remove_ban_user(user):
-    ban_user = db.query(Ban).filter(Ban.username == user.username).first()
-    if ban_user != None:
-        db.delete(ban_user)
-        db.commit()
+    Ban.find_one_and_delete({'username': user['username']})
+
+def update_leaderboard(id, param):
+    Leaderboard.find_one_and_update({"_id": id}, {"$set": param})

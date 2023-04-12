@@ -4,11 +4,9 @@ import time
 from hdwallet.symbols import ETH as SYMBOL
 from operator import attrgetter
 from datetime import datetime
-from config import inspector, engine, wallet, Session
-from model.tables import Base, Project
+from config import wallet
+from model import Project
 from api import get_token_pairs, cryptocurrency_info, go_plus_token_info
-
-db = Session()
 
 def format_number_string(number):
     number = float(number)
@@ -22,13 +20,12 @@ def return_percent(first, second):
     return str(round(percent, 2))
 
 def user_rug_check(project, reason):
-    pair_project = db.query(Project).filter(Project.id == project.id).first()
+    pair_project = Project.find_one({"_id": project['_id']})
     is_warn = False
     if pair_project != None:
-        pair_project.status = reason
-        db.commit()
+        Project.update_one({"_id": project['_id']}, {"$set":{"reason": reason}})
         current_time = datetime.utcnow()
-        delta = get_time_delta(current_time, pair_project.created_at)
+        delta = get_time_delta(current_time, pair_project['created_at'])
         if delta <= 30:
             is_warn = True
     
@@ -36,10 +33,10 @@ def user_rug_check(project, reason):
 
 async def current_status(project):
     try:
-        pairs = await get_token_pairs(project.token)
+        pairs = await get_token_pairs(project['token'])
         filtered_pairs = []
         if len(pairs) > 0:
-            filtered_pairs = [pair for pair in pairs if pair.base_token.address.lower() == project.token.lower()]
+            filtered_pairs = [pair for pair in pairs if pair.base_token.address.lower() == project['token'].lower()]
         
         pair = None
         if len(filtered_pairs)>0:
@@ -53,7 +50,7 @@ async def current_status(project):
             is_warn = user_rug_check(project, 'removed')
             return {"is_liquidity": False, "is_warn": is_warn}
         
-        marketcap_info = await cryptocurrency_info(project.token)
+        marketcap_info = await cryptocurrency_info(project['token'])
         circulating_supply = 0
         marketcap = pair.fdv
         if marketcap_info != None:
@@ -64,7 +61,7 @@ async def current_status(project):
         if circulating_supply != 0:
             marketcap = circulating_supply*pair.price_usd
 
-        marketcap_percent = marketcap/float(project.marketcap)
+        marketcap_percent = marketcap/float(project['marketcap'])
         return {"is_liquidity": True, "marketcap": marketcap, "percent": marketcap_percent}
     except:
         return {"is_liquidity":False, "is_warn": False}
@@ -74,7 +71,7 @@ def get_time_delta(time_one, time_two):
     delta_min = delta.seconds/60
     return delta_min
 
-def dex_coin_array(pairs):
+def dex_coin_array(pairs, count):
     dex_part_array = []
     coin_market_ids = []
     dex_part = ''
@@ -82,19 +79,19 @@ def dex_coin_array(pairs):
     index = 1
     for pair in pairs:
         if dex_part == '':
-            dex_part = pair.token
+            dex_part = pair['token']
         else:
-            dex_part += ","+pair.token
+            dex_part += ","+pair['token']
 
-        if pair.coin_market_id != None:
-            coin_market_part.append(pair.coin_market_id)
+        if pair['coin_market_id'] != None:
+            coin_market_part.append(pair['coin_market_id'])
         
         if index%20 == 0:
             dex_part_array.append(dex_part)
             dex_part = ''
             coin_market_ids.append(coin_market_part)
             coin_market_part = []
-        elif index == len(pairs):
+        elif index == count:
             dex_part_array.append(dex_part)
             dex_part = ''
             coin_market_ids.append(coin_market_part)
@@ -102,11 +99,6 @@ def dex_coin_array(pairs):
         index+=1
     
     return {"dex_array": dex_part_array, "coin_array": coin_market_ids}
-
-def check_table_exist():
-    table_names = inspector.get_table_names()
-    if not "pairs" in table_names:
-        Base.metadata.create_all(engine)
 
 def start_text():
     text = " ShillMasterBot Commands: \n\n"
@@ -146,7 +138,6 @@ def invoice_hash():
     stamp = time.time()
     hash = ''.join(random.choice(chars) for _ in range(16))
     result = str(hash)+str(stamp)
-    print(result)
     return result
 
 def choose_wallet():
