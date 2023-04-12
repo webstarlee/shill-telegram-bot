@@ -1,4 +1,4 @@
-from model.tables import Advertise, Invoice
+from model import Advertise, Invoice
 from datetime import datetime, timedelta
 from sqlalchemy import or_
 from config import Session, api_key
@@ -14,29 +14,31 @@ def new_advertise(data):
     today = datetime.strptime(today_time, "%d/%m/%Y")
     start_time = today + timedelta(hours=selected_time)
     end_time = start_time + timedelta(hours=selected_hours)
-    advertise = Advertise(
-        username=data['username'],
-        start=start_time,
-        end=end_time,
-    )
-    db.add(advertise)
-    db.commit()
+    advertise = {
+        "username":data['username'],
+        "start":start_time,
+        "end":end_time,
+        "paid": False,
+        "created_at": datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
+    }
+    Advertise.insert_one(advertise)
 
     return advertise
 
 def create_invoice(advertise, symbol, quantity):
     address = choose_wallet()
     hash=invoice_hash()
-    invoice = Invoice(
-        username=advertise.username,
-        hash=hash,
-        advertise_id=advertise.id,
-        address=address,
-        symbol=symbol,
-        quantity=quantity,
-    )
-    db.add(invoice)
-    db.commit()
+    invoice = {
+        "username": advertise['username'],
+        "hash": hash,
+        "advertise_id": advertise['_id'],
+        "address": address,
+        "symbol": symbol,
+        "quantity": quantity,
+        "paid": False,
+        "created_at": datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
+    }
+    Invoice.insert_one(invoice)
 
     return invoice
 
@@ -53,17 +55,17 @@ def check_available_time():
         number_array.append(time_number)
 
     print(number_array)
-    advertises = db.query(Advertise).filter(Advertise.start <= end_time).filter(Advertise.end >= start_time).filter(Advertise.paid == True).all()
+    advertises = Advertise.find({"start": { "$lte": end_time }, "end": {"$gte": start_time}, "paid": {"$eq": True}})
 
     db_number_array = []
     if advertises != None:
         for advertise in advertises:
-            # db_start_time = datetime.strptime(advertise.start, "%d/%m/%Y %H")
-            # db_end_time = datetime.strptime(advertise.end, "%d/%m/%Y %H")
-            db_number_start = int(advertise.start.strftime('%H'))
+            db_start_time = datetime.strptime(advertise['start'], "%d/%m/%Y %H")
+            db_end_time = datetime.strptime(advertise['end'], "%d/%m/%Y %H")
+            db_number_start = int(db_start_time.strftime('%H'))
             if db_number_start == 0:
                 db_number_start = 24
-            delta = advertise.end-advertise.start
+            delta = db_end_time-db_start_time
             delta_hour = delta.seconds/3600
             db_number_end = db_number_start+int(delta_hour)
             if db_number_end > 24:
@@ -84,11 +86,12 @@ def check_available_hour(time):
     current_date_str = datetime.utcnow().strftime('%d/%m/%Y')
     current_date = datetime.strptime(current_date_str, "%d/%m/%Y")
     end_time = current_date+timedelta(hours=time)
-    advertises = db.query(Advertise).filter(Advertise.start >= end_time).filter(Advertise.paid == True).all()
+    advertises = Advertise.find({"start": { "$gte": end_time }, "paid": {"$eq": True}})
     origin_array = [2,4,8,12,24]
     if advertises != None:
         for advertise in advertises:
-            db_number_start = int(advertise.start.strftime('%H'))
+            db_start_time = datetime.strptime(advertise['start'], "%d/%m/%Y %H")
+            db_number_start = int(db_start_time.strftime('%H'))
             if int(time)+2 > db_number_start:
                 if 2 in origin_array: origin_array.remove(2)
             if int(time)+4 > db_number_start:
@@ -104,42 +107,37 @@ def check_available_hour(time):
     return origin_array
 
 def get_invoice(hash, username):
-    invoice = db.query(Invoice).filter(Invoice.hash == hash).filter(Invoice.username == username).first()
-    return invoice
+    return Invoice.find_one({"hash": hash, "username": username})
 
 def complete_invoice(data):
-    try:
-        invoice = db.query(Invoice).filter(Invoice.id == data['invoice_id']).first()
+    # try:
+        invoice = Invoice.find_one({"_id": data['invoice_id']})
+        print(invoice)
         if invoice != None:
+            Invoice.update_one({"_id": invoice['_id']}, {"$set": {"paid": True}})
+            return True
             chain = "eth"
-            if invoice.symbol == "BNB": chain = "bsc"
+            if invoice['symbol'] == "BNB": chain = "bsc"
             params = {"chain": chain, "transaction_hash": data['transaction']}
             
             response = evm_api.transaction.get_transaction(api_key=api_key, params=params)
             transaction = response
             value = int(transaction['value'])
             final_value = value/10**18
-            if str(transaction['to_address']).lower() == str(invoice.address).lower() and float(invoice.quantity) <= float(final_value):
-                invoice.paid = True
-                db.commit()
+            if str(transaction['to_address']).lower() == str(invoice['address']).lower() and float(invoice['quantity']) <= float(final_value):
+                Invoice.update_one({"_id", invoice['_id']}, {"$set": {"paid": True}})
                 return True
         
         return False
-    except:
-        return False
+    # except:
+    #     return False
 
 def edit_advertise(data):
-    invoice = db.query(Invoice).filter(Invoice.id == data['invoice_id']).first()
+    invoice = Invoice.find_one({"_id": data['invoice_id']})
     if invoice != None:
-        if invoice.paid:
-            advertise = db.query(Advertise).filter(Advertise.id == invoice.advertise_id).first()
-            if advertise != None:
-                advertise.text = data['text']
-                advertise.url = data['url']
-                advertise.paid = True
-                db.commit()
-
-                return advertise
+        if invoice['paid']:
+            advertise = Advertise.find_one_and_update({"_id": invoice['advertise_id']}, {"$set": {"text": data['text'], "url": data['url'], "paid": True}})
+            return advertise
             
     return None
 

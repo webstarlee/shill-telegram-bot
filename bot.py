@@ -76,8 +76,8 @@ async def user_unblock(update, context):
         baned_user = get_baned_user(param)
         text = "@"+param+" is not banned"
         if baned_user != None:
-            text = "@"+baned_user.username+" is now unbanned ✅"
-            await context.bot.unban_chat_member(chat_id=baned_user.chat_id, user_id=baned_user.user_id)
+            text = "@"+baned_user['username']+" is now unbanned ✅"
+            await context.bot.unban_chat_member(chat_id=baned_user['chat_id'], user_id=baned_user['user_id'])
             remove_ban_user(baned_user)
         return await send_telegram_message(chat_id, text)
     else:
@@ -175,7 +175,7 @@ async def show_time(update, context):
                 end_index = len(available_time_list)
                 last_button = [InlineKeyboardButton(text="BACK", callback_data="SHOW_TIME")]
             
-            row = int((len(available_time_list)+1)/2)
+            row = int((end_index-start_index+1)/2)
             total_array = []
             for item in range(start_index, row+start_index):
                 first_num = item
@@ -340,8 +340,8 @@ async def payment(update, context):
         advertise = new_advertise(context.user_data)
         invoice = create_invoice(advertise, symbol, quantity)
 
-        text = "✌ New Invoice ✌\n\nYour Invoice ID is:<pre>"+str(invoice.hash)+"</pre>\n\n"
-        text += "Please send "+str(invoice.quantity)+" "+str(invoice.symbol)+" to\n<pre>"+str(invoice.address)+"</pre>\nwithin 30 minutes\n"
+        text = "✌ New Invoice ✌\n\nYour Invoice ID is:<pre>"+str(invoice['hash'])+"</pre>\n\n"
+        text += "Please send "+str(invoice['quantity'])+" "+str(invoice['symbol'])+" to\n<pre>"+str(invoice['address'])+"</pre>\nwithin 30 minutes\n"
         text += "After completing the payment, kindly enter '/invoice' in the chat to secure your advertisement..\n"
 
         await query.edit_message_text(text=text, parse_mode='HTML')
@@ -366,7 +366,7 @@ async def save_hash_input(update, context):
     invoice = get_invoice(hash, username)
     chat_id = update.effective_chat.id
     if invoice != None:
-        context.user_data['invoice_id'] = invoice.id
+        context.user_data['invoice_id'] = invoice['_id']
         text = "Perfect. Now Please input your transaction ID"
         await context.bot.send_message(chat_id=chat_id, text=text)
         return TRAN_TYPING
@@ -400,8 +400,8 @@ async def save_url_input(update, context):
     context.user_data['url'] = update.message.text
     chat_id = update.effective_chat.id
     advertise = edit_advertise(context.user_data)
-    start_date = advertise.start.strftime('%d/%m/%Y')
-    start_time_str = advertise.start.strftime('%H')
+    start_date = advertise['start'].strftime('%d/%m/%Y')
+    start_time_str = advertise['start'].strftime('%H')
     start_time = convert_am_pm(start_time_str)
     await context.bot.send_message(chat_id=chat_id, text="Ad purchase confirmation✅\nThank you for purchasing an advertisement. Your ad will go live at: "+start_date+" "+start_time)
     context.user_data['text'] = None
