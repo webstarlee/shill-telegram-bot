@@ -14,6 +14,7 @@ from helper.emoji import emojis
 async def user_shillmaster(user_id, username, chat_id, token):
     try:
         pairs = await get_token_pairs(token)
+        print(pairs)
         filtered_pairs = []
         if len(pairs) > 0:
             filtered_pairs = [pair for pair in pairs if pair.base_token.address.lower() == token.lower()]
@@ -26,19 +27,6 @@ async def user_shillmaster(user_id, username, chat_id, token):
             return {"is_rug": True, "reason": "liquidity", "text": "There is no Liquidity for this Token"}
         
         if int(pair.liquidity.usd) < 100:
-            project = {
-                "username": username,
-                "user_id":user_id,
-                "chat_id": chat_id,
-                "url":pair.url,
-                "token":token,
-                "token_symbol":pair.base_token.symbol,
-                "marketcap":"0",
-                "ath_value":"0",
-                "status":"no_liquidity",
-                "created_at": datetime.utcnow()
-            }
-            Project.insert_one(project)
             text = "There is no Liquidity for "+pair.base_token.symbol+" Token"
             return {"is_rug": True, "reason": "liquidity", "text": text}
         
@@ -146,7 +134,7 @@ def add_warn(username, user_id, chat_id):
         }
         Warn.insert_one(warn_user)
     
-    return warn_user
+    return Warn.find_one({"username": username})
 
 def remove_warn(username):
     warn_user = Warn.find_one({'username': username})
