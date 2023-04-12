@@ -116,37 +116,35 @@ async def leaderboard():
         
         if len(broadcasts)>0:
             for item in broadcasts:
-                broadcast = db.query(Leaderboard).filter(Leaderboard.id == item.id).first()
-                if broadcast != None:
-                    if broadcast.message_id:
-                        try:
-                            if reply_markup =="":
-                                await application.bot.edit_message_text(
-                                    chat_id=broadcast.chat_id,
-                                    message_id=broadcast.message_id,
-                                    text=broadcast.text,
-                                    disable_web_page_preview=True,
-                                    parse_mode='HTML'
-                                )
-                            else:
-                                await application.bot.edit_message_text(
-                                    chat_id=broadcast.chat_id,
-                                    message_id=broadcast.message_id,
-                                    text=broadcast.text,
-                                    disable_web_page_preview=True,
-                                    reply_markup=reply_markup,
-                                    parse_mode='HTML'
-                                )
-                        except:
-                            result = await send_telegram_message(broadcast.chat_id, broadcast.text, reply_markup, True)
-                            broadcast.message_id = result['message_id']
-                            db.commit()
-                    else:
-                        result = await send_telegram_message(broadcast.chat_id, broadcast.text, reply_markup, True)
-                        broadcast.message_id = result['message_id']
-                        db.commit()
+                if item.message_id != "":
+                    # try:
+                    # if reply_markup =="":
+                    #     await application.bot.edit_message_text(
+                    #         chat_id=item.chat_id,
+                    #         message_id=item.message_id,
+                    #         text=item.text,
+                    #         disable_web_page_preview=True,
+                    #         parse_mode='HTML'
+                    #     )
+                    # else:
+                    await application.bot.edit_message_text(
+                        chat_id=item.chat_id,
+                        message_id=item.message_id,
+                        text=item.text,
+                        disable_web_page_preview=True,
+                        reply_markup=reply_markup,
+                        parse_mode='HTML'
+                    )
+                    # except:
+                    #     result = await send_telegram_message(item.chat_id, item.text, reply_markup, True)
+                    #     item.message_id = result['message_id']
+                    #     db.commit()
+                else:
+                    result = await send_telegram_message(item.chat_id, item.text, reply_markup, True)
+                    item.message_id = result['message_id']
+                    db.commit()
 
-        await asyncio.sleep(50)
+        await asyncio.sleep(10)
 
 async def start(update, context):
     chat_id = update.effective_chat.id
@@ -485,8 +483,8 @@ async def cancel(update, context):
 
     return END
 
-loop = asyncio.get_event_loop()
-task = loop.create_task(leaderboard())
+# loop = asyncio.get_event_loop()
+# task = loop.create_task(leaderboard())
 
 if __name__ == '__main__':
     ad_handler = ConversationHandler(
@@ -526,7 +524,7 @@ if __name__ == '__main__':
     application.add_handler(MessageHandler(filters.Regex("/unban @(s)?"), user_unblock))
     application.run_polling()
 
-try:
-    loop.run_until_complete(task)
-except asyncio.CancelledError:
-    pass
+# try:
+#     loop.run_until_complete(task)
+# except asyncio.CancelledError:
+#     pass

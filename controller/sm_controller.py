@@ -2,7 +2,7 @@ from operator import attrgetter
 from datetime import datetime
 from sqlalchemy import desc
 from config import Session
-from model.tables import Project, Pair, Leaderboard, Warn
+from model import Project, Pair, Leaderboard, Warn
 from helper import (
     format_number_string,
     return_percent,
@@ -30,19 +30,19 @@ async def user_shillmaster(user_id, username, chat_id, token):
             return {"is_rug": True, "reason": "liquidity", "text": "There is no Liquidity for this Token"}
         
         if int(pair.liquidity.usd) < 100:
-            project = Project(
-                username=username,
-                user_id=user_id,
-                chat_id=chat_id,
-                url=pair.url,
-                token=token,
-                token_symbol=pair.base_token.symbol,
-                marketcap="0",
-                ath_value="0",
-                status="no_liquidity"
-            )
-            db.add(project)
-            db.commit()
+            project = {
+                "username": username,
+                "user_id":user_id,
+                "chat_id": chat_id,
+                "url":pair.url,
+                "token":token,
+                "token_symbol":pair.base_token.symbol,
+                "marketcap":"0",
+                "ath_value":"0",
+                "status":"no_liquidity",
+                "created_at": datetime.utcnow()
+            }
+            Project.insert_one(project)
             text = "There is no Liquidity for "+pair.base_token.symbol+" Token"
             return {"is_rug": True, "reason": "liquidity", "text": text}
         
@@ -52,19 +52,19 @@ async def user_shillmaster(user_id, username, chat_id, token):
             is_honeypot = True
         
         if is_honeypot:
-            project = Project(
-                username=username,
-                user_id=user_id,
-                chat_id=chat_id,
-                url=pair.url,
-                token=token,
-                token_symbol=pair.base_token.symbol,
-                marketcap="0",
-                ath_value="0",
-                status="honeypot"
-            )
-            db.add(project)
-            db.commit()
+            project = {
+                "username": username,
+                "user_id":user_id,
+                "chat_id": chat_id,
+                "url":pair.url,
+                "token":token,
+                "token_symbol":pair.base_token.symbol,
+                "marketcap":"0",
+                "ath_value":"0",
+                "status":"honeypot",
+                "created_at": datetime.utcnow()
+            }
+            Project.insert_one(project)
             text = pair.base_token.symbol+" Token look like honeypot"
             return {"is_rug": True, "reason": "honeypot", "text": text}
 
@@ -83,48 +83,46 @@ async def user_shillmaster(user_id, username, chat_id, token):
 
         if circulating_supply != 0:
             marketcap = circulating_supply*pair.price_usd
-        
-        pair_project = db.query(Project).filter(Project.username == username).filter(Project.token == token).first()
-        pair_token = db.query(Pair).filter(Pair.token == token).first()
+
+        pair_project = Project.find_one({"username": username, "token": token})
+        pair_token = Pair.find_one({"token": token})
+        print(pair_project)
         if pair_token != None:
-            pair_token.marketcap = str(marketcap)
-            pair_token.updated_at = datetime.now()
-            db.commit()
+            Pair.update_one({"_id": pair_token['_id']},{"$set":{"marketcap": marketcap}})
         else:
-            pair_token = Pair(
-                token=token,
-                symbol=pair.base_token.symbol,
-                pair_url=pair.url,
-                marketcap=str(marketcap),
-                coin_market_id=coin_marketcap_id
-            )
-            db.add(pair_token)
-            db.commit()
+            pair_token = {
+                "token":token,
+                "symbol":pair.base_token.symbol,
+                "pair_url":pair.url,
+                "marketcap":str(marketcap),
+                "coin_market_id":coin_marketcap_id,
+                "updated_at": datetime.utcnow()
+            }
+            Pair.insert_one(pair_token)
 
         if pair_project != None:
             is_new = False
-            if float(marketcap)>float(pair_project.ath_value):
-                pair_project.ath_value = str(marketcap)
-                db.commit()
-            marketcap_percent = marketcap/float(pair_project.marketcap)
-            bot_txt = emojis['dizzy']+" <a href='"+pair.url+"' >"+pair_project.token_symbol+"</a> Already Shared marketcap: $"+format_number_string(pair_project.marketcap)+"\n"
+            if float(marketcap)>float(pair_project['ath_value']):
+                Project.update_one({"_id": pair_project['_id']},{"$set":{"ath_value": marketcap}})
+            marketcap_percent = marketcap/float(pair_project['marketcap'])
+            bot_txt = emojis['dizzy']+" <a href='"+pair.url+"' >"+pair_project['token_symbol']+"</a> Already Shared marketcap: $"+format_number_string(pair_project['marketcap'])+"\n"
             bot_txt += emojis['point_right']+" Currently: $"+format_number_string(marketcap)+" ("+str(round(marketcap_percent, 2))+"x)\n"
-            if float(marketcap)< float(pair_project.ath_value):
-                bot_txt += emojis['point_right']+" ATH: $"+format_number_string(pair_project.ath_value)+" ("+return_percent(pair_project.ath_value, pair_project.marketcap)+"x)\n"
+            if float(marketcap)< float(pair_project['ath_value']):
+                bot_txt += emojis['point_right']+" ATH: $"+format_number_string(pair_project['ath_value'])+" ("+return_percent(pair_project['ath_value'], pair_project['marketcap'])+"x)\n"
             bot_txt += "\n"
         else:
-            project = Project(
-                username=username,
-                user_id=user_id,
-                chat_id=chat_id,
-                url=pair.url,
-                token=token,
-                token_symbol=pair.base_token.symbol,
-                marketcap=marketcap,
-                ath_value=marketcap
-            )
-            db.add(project)
-            db.commit()
+            project = {
+                "username": username,
+                "user_id": user_id,
+                "chat_id": chat_id,
+                "url": pair.url,
+                "token": token,
+                "token_symbol": pair.base_token.symbol,
+                "marketcap": marketcap,
+                "ath_value": marketcap,
+                "created_at": datetime.utcnow()
+            }
+            Project.insert_one(project)
             bot_txt = emojis['tada']+" @"+username+" shilled\n"
             bot_txt += emojis['point_right']+" "+token+"\n"+emojis['point_right']+" <a href='"+pair.url+"' >" + pair.base_token.symbol+"</a>- Current marketcap: $"+format_number_string(marketcap)
 
