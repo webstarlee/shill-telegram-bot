@@ -1,7 +1,6 @@
 import random
 import string
 import time
-from hdwallet.symbols import ETH as SYMBOL
 from operator import attrgetter
 from datetime import datetime
 from config import wallet

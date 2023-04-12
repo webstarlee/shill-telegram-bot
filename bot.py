@@ -141,7 +141,7 @@ async def leaderboard():
                     result = await send_telegram_message(item['chat_id'], item['text'], reply_markup, True)
                     update_leaderboard(item['_id'], {"message_id": result['message_id']})
 
-        await asyncio.sleep(50)
+        await asyncio.sleep(90)
 
 async def start(update, context):
     chat_id = update.effective_chat.id
