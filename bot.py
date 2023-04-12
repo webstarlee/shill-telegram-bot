@@ -9,7 +9,7 @@ from telegram.ext import (
 from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from controller.sm_controller import user_shillmaster, get_user_shillmaster, add_warn, remove_warn, get_user_warn
-from controller.lb_controller import get_broadcast, token_update, add_ban_user, get_baned_user, remove_ban_user
+from controller.lb_controller import get_broadcast, token_update, add_ban_user, get_baned_user, remove_ban_user, update_leaderboard
 from controller.ad_controller import (
     new_advertise,
     check_available_time,
@@ -20,13 +20,12 @@ from controller.ad_controller import (
     get_active_advertise,
     get_invoice
 )
-from config import bot_token, leaderboard_id, Session
+from config import bot_token, leaderboard_id
 from helper.emoji import emojis
 from helper import start_text, convert_am_pm, get_params
 import asyncio
 
 application = ApplicationBuilder().token(bot_token).build()
-db = Session()
 NEXT = map(chr, range(10, 22))
 SHOW_HOUR, SHOW_TIME = map(chr, range(8, 10))
 TEXT_TYPING = map(chr, range(8, 10))
@@ -109,41 +108,40 @@ async def leaderboard():
         reply_markup=""
         if advertise != None:
             keyboard = [
-                [InlineKeyboardButton(text=emojis['bangbang']+emojis['dog']+" "+advertise.text+" "+emojis['dog']+emojis['bangbang'], url=advertise.url)],
+                [InlineKeyboardButton(text=emojis['bangbang']+emojis['dog']+" "+advertise['text']+" "+emojis['dog']+emojis['bangbang'], url=advertise['url'])],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
         
-        if len(broadcasts)>0:
+        if broadcasts != None:
             for item in broadcasts:
-                if item.message_id != "":
+                if "message_id" in item:
                     # try:
-                    # if reply_markup =="":
-                    #     await application.bot.edit_message_text(
-                    #         chat_id=item.chat_id,
-                    #         message_id=item.message_id,
-                    #         text=item.text,
-                    #         disable_web_page_preview=True,
-                    #         parse_mode='HTML'
-                    #     )
-                    # else:
-                    await application.bot.edit_message_text(
-                        chat_id=item.chat_id,
-                        message_id=item.message_id,
-                        text=item.text,
-                        disable_web_page_preview=True,
-                        reply_markup=reply_markup,
-                        parse_mode='HTML'
-                    )
+                    if reply_markup =="":
+                        await application.bot.edit_message_text(
+                            chat_id=item['chat_id'],
+                            message_id=item['message_id'],
+                            text=item['text'],
+                            disable_web_page_preview=True,
+                            parse_mode='HTML'
+                        )
+                    else:
+                        await application.bot.edit_message_text(
+                            chat_id=item['chat_id'],
+                            message_id=item['message_id'],
+                            text=item['text'],
+                            disable_web_page_preview=True,
+                            reply_markup=reply_markup,
+                            parse_mode='HTML'
+                        )
                     # except:
                     #     result = await send_telegram_message(item.chat_id, item.text, reply_markup, True)
                     #     item.message_id = result['message_id']
                     #     db.commit()
                 else:
-                    result = await send_telegram_message(item.chat_id, item.text, reply_markup, True)
-                    item.message_id = result['message_id']
-                    db.commit()
+                    result = await send_telegram_message(item['chat_id'], item['text'], reply_markup, True)
+                    update_leaderboard(item['_id'], {"message_id": result['message_id']})
 
-        await asyncio.sleep(10)
+        await asyncio.sleep(50)
 
 async def start(update, context):
     chat_id = update.effective_chat.id
@@ -271,10 +269,8 @@ async def choose_token(update, context):
     keyboard=[]
     await query.answer()
     hours = int(query.data)
-    print("hours: ", hours)
     context.user_data['hours'] = hours
     if hours==2:
-        print("call here 2")
         keyboard = [
             [
                 InlineKeyboardButton(text="0.075 ETH", callback_data="0.075ETH"),
@@ -476,8 +472,8 @@ async def cancel(update, context):
 
     return END
 
-# loop = asyncio.get_event_loop()
-# task = loop.create_task(leaderboard())
+loop = asyncio.get_event_loop()
+task = loop.create_task(leaderboard())
 
 if __name__ == '__main__':
     ad_handler = ConversationHandler(
@@ -516,7 +512,7 @@ if __name__ == '__main__':
     application.add_handler(MessageHandler(filters.Regex("/unban @(s)?"), user_unblock))
     application.run_polling()
 
-# try:
-#     loop.run_until_complete(task)
-# except asyncio.CancelledError:
-#     pass
+try:
+    loop.run_until_complete(task)
+except asyncio.CancelledError:
+    pass

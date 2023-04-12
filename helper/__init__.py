@@ -4,11 +4,9 @@ import time
 from hdwallet.symbols import ETH as SYMBOL
 from operator import attrgetter
 from datetime import datetime
-from config import inspector, engine, wallet, Session
+from config import wallet
 from model import Project
 from api import get_token_pairs, cryptocurrency_info, go_plus_token_info
-
-db = Session()
 
 def format_number_string(number):
     number = float(number)
@@ -73,7 +71,7 @@ def get_time_delta(time_one, time_two):
     delta_min = delta.seconds/60
     return delta_min
 
-def dex_coin_array(pairs):
+def dex_coin_array(pairs, count):
     dex_part_array = []
     coin_market_ids = []
     dex_part = ''
@@ -81,19 +79,19 @@ def dex_coin_array(pairs):
     index = 1
     for pair in pairs:
         if dex_part == '':
-            dex_part = pair.token
+            dex_part = pair['token']
         else:
-            dex_part += ","+pair.token
+            dex_part += ","+pair['token']
 
-        if pair.coin_market_id != None:
-            coin_market_part.append(pair.coin_market_id)
+        if pair['coin_market_id'] != None:
+            coin_market_part.append(pair['coin_market_id'])
         
         if index%20 == 0:
             dex_part_array.append(dex_part)
             dex_part = ''
             coin_market_ids.append(coin_market_part)
             coin_market_part = []
-        elif index == len(pairs):
+        elif index == count:
             dex_part_array.append(dex_part)
             dex_part = ''
             coin_market_ids.append(coin_market_part)
@@ -140,7 +138,6 @@ def invoice_hash():
     stamp = time.time()
     hash = ''.join(random.choice(chars) for _ in range(16))
     result = str(hash)+str(stamp)
-    print(result)
     return result
 
 def choose_wallet():

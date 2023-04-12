@@ -1,11 +1,9 @@
 from model import Advertise, Invoice
 from datetime import datetime, timedelta
 from sqlalchemy import or_
-from config import Session, api_key
+from config import api_key
 from helper import choose_wallet, invoice_hash, get_time_delta
 from moralis import evm_api
-
-db = Session()
 
 def new_advertise(data):
     selected_time = int(data['time'])
@@ -107,12 +105,10 @@ def get_invoice(hash, username):
     return Invoice.find_one({"hash": hash, "username": username})
 
 def complete_invoice(data):
-    # try:
+    try:
         invoice = Invoice.find_one({"_id": data['invoice_id']})
         print(invoice)
         if invoice != None:
-            Invoice.update_one({"_id": invoice['_id']}, {"$set": {"paid": True}})
-            return True
             chain = "eth"
             if invoice['symbol'] == "BNB": chain = "bsc"
             params = {"chain": chain, "transaction_hash": data['transaction']}
@@ -126,8 +122,8 @@ def complete_invoice(data):
                 return True
         
         return False
-    # except:
-    #     return False
+    except:
+        return False
 
 def edit_advertise(data):
     invoice = Invoice.find_one({"_id": data['invoice_id']})
@@ -141,16 +137,15 @@ def edit_advertise(data):
 def get_active_advertise():
     now_time = datetime.utcnow()
     clear_unpaid_advertise()
-    advertise = db.query(Advertise).filter(Advertise.start <= now_time).filter(Advertise.end >= now_time).filter(Advertise.paid == True).first()
+    advertise = Advertise.find_one({"start": {"$lte": now_time}, "end": {"$gte": now_time}, "paid": {"$eq": True}})
 
     return advertise
 
 def clear_unpaid_advertise():
     now_time = datetime.utcnow()
-    advertises = db.query(Advertise).filter(Advertise.paid == False).all()
-    if advertises != None and len(advertises)>0:
+    advertises = Advertise.find({"paid": {"$eq": False}})
+    if advertises != None:
         for advertise in advertises:
-            delta = get_time_delta(advertise.created_at, now_time)
+            delta = get_time_delta(advertise['created_at'], now_time)
             if int(delta) > 30:
-                db.delete(advertise)
-                db.commit()
+                Advertise.find_one_and_delete({"_id": advertise['_id']})

@@ -1,6 +1,5 @@
 from operator import attrgetter
 from datetime import datetime
-from sqlalchemy import desc
 from model import Project, Pair, Leaderboard, Warn
 from helper import (
     format_number_string,
