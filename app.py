@@ -164,8 +164,8 @@ async def show_time(update, context):
                 total_array.append(row_array)
             
             keyboard = total_array
-            cancel_button = [InlineKeyboardButton(text="CANCEL", callback_data="CANCEL_CONV")]
-            keyboard.append(cancel_button)
+        cancel_button = [InlineKeyboardButton(text="CANCEL", callback_data="CANCEL_CONV")]
+        keyboard.append(cancel_button)
         time_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(text="When do you want the advertisement to begin being displayed?", reply_markup=time_markup)
 
