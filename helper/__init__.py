@@ -125,6 +125,26 @@ def convert_am_pm(item):
     result_time = str(time_numner)+str(status)
     return result_time
 
+def convert_am_str(item):
+    item = int(item)
+    status = "AM"
+    if item == 12:
+        status = "PM"
+    elif item > 12:
+        status = "PM"
+    return str(status)
+
+def convert_am_time(item):
+    item = int(item)
+    time_numner = item
+    if item == 0:
+        time_numner = 12
+    elif item == 24:
+        time_numner = 12
+    elif item > 12:
+        time_numner = item-12
+    return str(time_numner)
+
 def mHash():
     new_private = ""
     for item in range(64):
