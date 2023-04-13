@@ -111,16 +111,17 @@ async def leaderboard():
                 [InlineKeyboardButton(text=emojis['bangbang']+emojis['dog']+" "+advertise['text']+" "+emojis['dog']+emojis['bangbang'], url=advertise['url'])],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        if broadcasts != None:
-            for item in broadcasts:
-                if "message_id" in item:
-                    # try:
+
+        for item in broadcasts:
+            text = item['text']
+            text += "<code>"+datetime.utcnow().strftime("%d/%m/%y %H:%M")+"</code>"
+            if "message_id" in item:
+                try:
                     if reply_markup =="":
                         await application.bot.edit_message_text(
                             chat_id=item['chat_id'],
                             message_id=item['message_id'],
-                            text=item['text'],
+                            text=text,
                             disable_web_page_preview=True,
                             parse_mode='HTML'
                         )
@@ -128,18 +129,17 @@ async def leaderboard():
                         await application.bot.edit_message_text(
                             chat_id=item['chat_id'],
                             message_id=item['message_id'],
-                            text=item['text'],
+                            text=text,
                             disable_web_page_preview=True,
                             reply_markup=reply_markup,
                             parse_mode='HTML'
                         )
-                    # except:
-                    #     result = await send_telegram_message(item.chat_id, item.text, reply_markup, True)
-                    #     item.message_id = result['message_id']
-                    #     db.commit()
-                else:
-                    result = await send_telegram_message(item['chat_id'], item['text'], reply_markup, True)
+                except:
+                    result = await send_telegram_message(item['chat_id'], text, reply_markup, True)
                     update_leaderboard(item['_id'], {"message_id": result['message_id']})
+            else:
+                result = await send_telegram_message(item['chat_id'], text, reply_markup, True)
+                update_leaderboard(item['_id'], {"message_id": result['message_id']})
 
         await asyncio.sleep(90)
 
@@ -336,8 +336,8 @@ async def payment(update, context):
         advertise = new_advertise(context.user_data)
         invoice = create_invoice(advertise, symbol, quantity)
 
-        text = "✌ New Invoice ✌\n\nYour Invoice ID is:<pre>"+str(invoice['hash'])+"</pre>\n\n"
-        text += "Please send "+str(invoice['quantity'])+" "+str(invoice['symbol'])+" to\n<pre>"+str(invoice['address'])+"</pre>\nwithin 30 minutes\n"
+        text = "✌ New Invoice ✌\n\nYour Invoice ID is\n:<code>"+str(invoice['hash'])+"</code>\n\n"
+        text += "Please send "+str(invoice['quantity'])+" "+str(invoice['symbol'])+" to\n<code>"+str(invoice['address'])+"</code>\nwithin 30 minutes\n"
         text += "After completing the payment, kindly enter '/invoice' in the chat to secure your advertisement..\n"
 
         await query.edit_message_text(text=text, parse_mode='HTML')

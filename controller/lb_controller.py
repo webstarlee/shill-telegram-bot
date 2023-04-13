@@ -92,35 +92,40 @@ def get_broadcast():
     two_text = "TOP 10 SHILLERS PAST 2 WEEKS\n\n" + broadcast_text(two_results)
     one_text = "TOP 10 SHILLERS PAST WEEK\n\n" + broadcast_text(one_results)
 
-    leaderboard_dbs = []
+    leaderboard_ids = []
     all_time_leaderbard = Leaderboard.find_one({"type": "all"})
     if all_time_leaderbard != None:
         if all_time_leaderbard['text'] != all_text:
             update_leaderboard(all_time_leaderbard['_id'], {"text": all_text})
+            leaderboard_ids.append(all_time_leaderbard['_id'])
     else:
         all_time_leaderbard = {"type": "all", "chat_id": leaderboard_id, "text": all_text}
-        leaderboard_dbs.append(all_time_leaderbard)
+        Leaderboard.insert_one(all_time_leaderbard)
+        leaderboard_ids.append(all_time_leaderbard['_id'])
 
     two_week_leaderbard = Leaderboard.find_one({"type": "two"})
     if two_week_leaderbard != None:
         if two_week_leaderbard['text'] != two_text:
             update_leaderboard(two_week_leaderbard['_id'], {"text": two_text})
+            leaderboard_ids.append(two_week_leaderbard['_id'])
     else:
         two_week_leaderbard = {"type": "two", "chat_id": leaderboard_id, "text": two_text}
-        leaderboard_dbs.append(two_week_leaderbard)
+        Leaderboard.insert_one(two_week_leaderbard)
+        leaderboard_ids.append(two_week_leaderbard['_id'])
     
     one_week_leaderbard = Leaderboard.find_one({"type": "one"})
     if one_week_leaderbard != None:
         if one_week_leaderbard['text'] != one_text:
             update_leaderboard(one_week_leaderbard['_id'], {"text": one_text})
+            leaderboard_ids.append(one_week_leaderbard['_id'])
     else:
         one_week_leaderbard = {"type": "one", "chat_id": leaderboard_id, "text": one_text}
-        leaderboard_dbs.append(one_week_leaderbard)
-
-    if len(leaderboard_dbs) > 0:
-        Leaderboard.insert_many(leaderboard_dbs)
-
-    broadcasting_data = Leaderboard.find()
+        Leaderboard.insert_one(one_week_leaderbard)
+        leaderboard_ids.append(one_week_leaderbard['_id'])
+    
+    broadcasting_data = []
+    if len(leaderboard_ids)>0:
+        broadcasting_data = list(Leaderboard.find({ "_id": { "$in": leaderboard_ids } }))
 
     return broadcasting_data
 

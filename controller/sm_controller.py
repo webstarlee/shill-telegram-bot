@@ -14,7 +14,6 @@ from helper.emoji import emojis
 async def user_shillmaster(user_id, username, chat_id, token):
     try:
         pairs = await get_token_pairs(token)
-        print(pairs)
         filtered_pairs = []
         if len(pairs) > 0:
             filtered_pairs = [pair for pair in pairs if pair.base_token.address.lower() == token.lower()]
@@ -70,7 +69,6 @@ async def user_shillmaster(user_id, username, chat_id, token):
 
         pair_project = Project.find_one({"username": username, "token": token})
         pair_token = Pair.find_one({"token": token})
-        print(pair_project)
         if pair_token != None:
             Pair.update_one({"_id": pair_token['_id']},{"$set":{"marketcap": marketcap}})
         else:
@@ -119,7 +117,6 @@ async def user_shillmaster(user_id, username, chat_id, token):
         return {"is_rug": True, "reason": "liquidity", "text": text}
 
 def add_warn(username, user_id, chat_id):
-    print("add warn user")
     warn_user = Warn.find_one({"username": username})
     if warn_user != None:
         current_count = warn_user['count']

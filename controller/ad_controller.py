@@ -51,7 +51,6 @@ def check_available_time():
     for time_number in range(number_start, 25):
         number_array.append(time_number)
 
-    print(number_array)
     advertises = Advertise.find({"start": { "$lte": end_time }, "end": {"$gte": start_time}, "paid": {"$eq": True}})
 
     db_number_array = []
@@ -74,7 +73,6 @@ def check_available_time():
             if item in number_array:
                 number_array.remove(item)
 
-    print(number_array)
     return number_array
 
 def check_available_hour(time):
@@ -96,8 +94,7 @@ def check_available_hour(time):
                 if 12 in origin_array: origin_array.remove(12)
             if int(time)+24 > db_number_start:
                 if 24 in origin_array: origin_array.remove(24)
-    
-    print(origin_array)
+
     return origin_array
 
 def get_invoice(hash, username):
@@ -106,7 +103,6 @@ def get_invoice(hash, username):
 def complete_invoice(data):
     try:
         invoice = Invoice.find_one({"_id": data['invoice_id']})
-        print(invoice)
         if invoice != None:
             chain = "eth"
             if invoice['symbol'] == "BNB": chain = "bsc"
