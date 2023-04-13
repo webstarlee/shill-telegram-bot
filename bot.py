@@ -22,7 +22,7 @@ from controller.ad_controller import (
 )
 from config import bot_token, leaderboard_id
 from helper.emoji import emojis
-from helper import start_text, convert_am_pm, get_params
+from helper import start_text, convert_am_pm, get_params, convert_am_str, convert_am_time
 import asyncio
 
 application = ApplicationBuilder().token(bot_token).build()
@@ -114,7 +114,7 @@ async def leaderboard():
 
         for item in broadcasts:
             text = item['text']
-            text += "<code>"+datetime.utcnow().strftime("%d/%m/%y %H:%M")+"</code>"
+            text += "<code>UTC:"+datetime.utcnow().strftime("%d/%m/%y")+" "+convert_am_time(datetime.utcnow().strftime("%H"))+":"+datetime.utcnow().strftime("%M")+" "+convert_am_str(datetime.utcnow().strftime("%H"))+"</code>"
             if "message_id" in item:
                 try:
                     if reply_markup =="":
@@ -336,7 +336,7 @@ async def payment(update, context):
         advertise = new_advertise(context.user_data)
         invoice = create_invoice(advertise, symbol, quantity)
 
-        text = "✌ New Invoice ✌\n\nYour Invoice ID is\n:<code>"+str(invoice['hash'])+"</code>\n\n"
+        text = "✌ New Invoice ✌\n\nYour Invoice ID is:\n<code>"+str(invoice['hash'])+"</code>\n\n"
         text += "Please send "+str(invoice['quantity'])+" "+str(invoice['symbol'])+" to\n<code>"+str(invoice['address'])+"</code>\nwithin 30 minutes\n"
         text += "After completing the payment, kindly enter '/invoice' in the chat to secure your advertisement..\n"
 

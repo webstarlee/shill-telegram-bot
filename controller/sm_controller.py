@@ -87,10 +87,10 @@ async def user_shillmaster(user_id, username, chat_id, token):
             if float(marketcap)>float(pair_project['ath_value']):
                 Project.update_one({"_id": pair_project['_id']},{"$set":{"ath_value": marketcap}})
             marketcap_percent = marketcap/float(pair_project['marketcap'])
-            bot_txt = emojis['dizzy']+" <a href='"+pair.url+"' >"+pair_project['token_symbol']+"</a> Already Shared marketcap: $"+format_number_string(pair_project['marketcap'])+"\n"
+            bot_txt = "💰 <a href='"+pair.url+"' >"+pair_project['token_symbol']+"</a> Already Shared marketcap: $"+format_number_string(pair_project['marketcap'])+"\n"
             bot_txt += emojis['point_right']+" Currently: $"+format_number_string(marketcap)+" ("+str(round(marketcap_percent, 2))+"x)\n"
             if float(marketcap)< float(pair_project['ath_value']):
-                bot_txt += emojis['point_right']+" ATH: $"+format_number_string(pair_project['ath_value'])+" ("+return_percent(pair_project['ath_value'], pair_project['marketcap'])+"x)\n"
+                bot_txt += "🏆 ATH: $"+format_number_string(pair_project['ath_value'])+" ("+return_percent(pair_project['ath_value'], pair_project['marketcap'])+"x)\n"
             bot_txt += "\n"
         else:
             project = {
@@ -107,7 +107,7 @@ async def user_shillmaster(user_id, username, chat_id, token):
             }
             Project.insert_one(project)
             bot_txt = emojis['tada']+" @"+username+" shilled\n"
-            bot_txt += emojis['point_right']+" "+token+"\n"+emojis['point_right']+" <a href='"+pair.url+"' >" + pair.base_token.symbol+"</a>- Current marketcap: $"+format_number_string(marketcap)
+            bot_txt += emojis['point_right']+" "+token+"\n💰 <a href='"+pair.url+"' >" + pair.base_token.symbol+"</a>- Current marketcap: $"+format_number_string(marketcap)
 
         return {"is_rug": False, "text": bot_txt, "is_new": is_new}
 
