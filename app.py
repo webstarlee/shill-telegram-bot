@@ -16,7 +16,6 @@ from controller.ad_controller import (
     complete_invoice,
     edit_advertise,
     check_available_hour,
-    get_active_advertise,
     get_invoice
 )
 from bot import (
@@ -32,7 +31,6 @@ from helper import convert_am_pm
 import asyncio
 
 logging.basicConfig(level=logging.DEBUG)
-
 application = ApplicationBuilder().token(bot_token).build()
 NEXT = map(chr, range(10, 22))
 SHOW_HOUR, SHOW_TIME = map(chr, range(8, 10))
