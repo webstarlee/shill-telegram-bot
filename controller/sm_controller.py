@@ -7,12 +7,13 @@ from helper import (
     current_status,
     get_token_pairs,
     cryptocurrency_info,
-    go_plus_token_info
+    go_plus_token_info,
+    check_honey_pot
 )
 from helper.emoji import emojis
 
 async def user_shillmaster(user_id, username, chat_id, token):
-    try:
+    # try:
         pairs = await get_token_pairs(token)
         filtered_pairs = []
         if len(pairs) > 0:
@@ -28,6 +29,10 @@ async def user_shillmaster(user_id, username, chat_id, token):
         if int(pair.liquidity.usd) < 100:
             text = "There is no Liquidity for "+pair.base_token.symbol+" Token"
             return {"is_rug": True, "reason": "liquidity", "text": text}
+
+        await check_honey_pot(token, pair)
+
+        return {"is_rug": False, "reason": "liquidity", "text": "text"}
         
         token_security = await go_plus_token_info(token, pair.chain_id)
         is_honeypot = False
@@ -111,10 +116,10 @@ async def user_shillmaster(user_id, username, chat_id, token):
 
         return {"is_rug": False, "text": bot_txt, "is_new": is_new}
 
-    except:
+    # except:
 
-        text="There is no liquidity for this token"
-        return {"is_rug": True, "reason": "liquidity", "text": text}
+    #     text="There is no liquidity for this token"
+    #     return {"is_rug": True, "reason": "liquidity", "text": text}
 
 def add_warn(username, user_id, chat_id):
     warn_user = Warn.find_one({"username": username})

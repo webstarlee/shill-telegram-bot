@@ -30,7 +30,7 @@ from bot import (
 from helper import convert_am_pm
 import asyncio
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 application = ApplicationBuilder().token(bot_token).build()
 NEXT = map(chr, range(10, 22))
 SHOW_HOUR, SHOW_TIME = map(chr, range(8, 10))
@@ -56,8 +56,8 @@ async def shill(update, context):
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
     username = update.effective_user.username
-    logging.debug('Token shill thread start!')
     asyncio.get_event_loop().create_task(shill_token_save(receive_text, chat_id, user_id, username))
+    print("save start")
 
     return None
 
@@ -65,7 +65,7 @@ async def shillmaster(update, context):
     receive_text = update.message.text
     chat_id = update.effective_chat.id
     asyncio.get_event_loop().create_task(shill_token_status(receive_text, chat_id))
-
+    print("asdfasdf")
     return None
 
 async def remove_warning(update, context):
@@ -390,7 +390,7 @@ if __name__ == '__main__':
     ))
     application.run_polling()
 
-try:
-    loop.run_until_complete(task)
-except asyncio.CancelledError:
-    pass
+# try:
+#     loop.run_until_complete(task)
+# except asyncio.CancelledError:
+#     pass
