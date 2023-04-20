@@ -30,7 +30,6 @@ from bot import (
 from helper import convert_am_pm
 import asyncio
 
-# logging.basicConfig(level=logging.DEBUG)
 application = ApplicationBuilder().token(bot_token).build()
 NEXT = map(chr, range(10, 22))
 SHOW_HOUR, SHOW_TIME = map(chr, range(8, 10))
@@ -390,7 +389,7 @@ if __name__ == '__main__':
     ))
     application.run_polling()
 
-# try:
-#     loop.run_until_complete(task)
-# except asyncio.CancelledError:
-#     pass
+try:
+    loop.run_until_complete(task)
+except asyncio.CancelledError:
+    pass
