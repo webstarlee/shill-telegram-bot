@@ -191,6 +191,4 @@ def get_token_holder(token, chain):
     return holder_address
 
 async def check_honey_pot(token, pair):
-    print("helper called")
-
-    await run_hoeny_check_api(pair, token)
+    return await run_hoeny_check_api(pair, token)

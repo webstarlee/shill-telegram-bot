@@ -110,22 +110,22 @@ async def shill_token_save(receive_text, chat_id, user_id, username):
     param = get_params(receive_text, "/shill")
     param = param.replace("@", "")
     response = await user_shillmaster(user_id, username, chat_id, param)
-    # is_rug = response['is_rug']
-    # if is_rug:
-    #     user_warn = add_warn(username, user_id, chat_id)
-    #     text = response['text'] + "\n\n@"+username+" warned: "+str(user_warn['count'])+" Project Rugged ❌"
-    #     if user_warn['count'] > 1:
-    #         text = response['text'] + "\n\n@"+username+" Banned: Posted "+str(user_warn['count'])+" Rugs ❌"
-    #         await _block_user(user_warn)
+    is_rug = response['is_rug']
+    if is_rug:
+        user_warn = add_warn(username, user_id, chat_id)
+        text = response['text'] + "\n\n@"+username+" warned: "+str(user_warn['count'])+" Project Rugged ❌"
+        if user_warn['count'] > 1:
+            text = response['text'] + "\n\n@"+username+" Banned: Posted "+str(user_warn['count'])+" Rugs ❌"
+            await _block_user(user_warn)
 
-    #     return await _send_message(chat_id, text)
+        return await _send_message(chat_id, text)
 
-    # payload_txt = response['text']
-    # is_new = response['is_new']
-    # if is_new:
-    #     await _send_message(leaderboard_id, payload_txt)
+    payload_txt = response['text']
+    is_new = response['is_new']
+    if is_new:
+        await _send_message(leaderboard_id, payload_txt)
     
-    # return await _send_message(chat_id, payload_txt)
+    return await _send_message(chat_id, payload_txt)
 
 async def shill_token_status(receive_text, chat_id):
     param = get_params(receive_text, "/shillmaster")

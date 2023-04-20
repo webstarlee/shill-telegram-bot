@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 import os
 from pathlib import Path
+from .routers import eth_routers
 
 config_path = Path(os.path.dirname(__file__))
 ROOT_PATH = config_path.parent.absolute()
@@ -16,7 +17,7 @@ leaderboard_id = "-1001894150735"
 # leaderboard_id = "-1001964784230"
 
 #coinmarketcap api
-cmc_key = "e8456919-e960-45bf-865c-96d04f767c7c"
+cmc_key = "8d44a2eb-52eb-4718-8bed-5b21a1eb5747"
 # moralis key
 api_key = 'zr1lLilY41uO0MTVJOOMNIzMrAnbVVSqn4tRUyeicZycPR6LUVMLH2WG71sYkJNt'
 # main wallet
@@ -36,6 +37,6 @@ with open(hoenypot_abi_path) as honeypot_abi_file:
     honeypot_abi = honeypot_abi_file.read()
 
 honey_check_contracts = {
-    "ethereum": "0xe7e07a2281f1e66e938ae7feefc69db181329f12",
-    "bsc": "0x385826FBd70DfBB0a7188eE790A36E1fe4f6fc34"
+    "ethereum": "0xbF7B21D5529b4B019f1f7Ce5465Ff147463d604D",
+    "bsc": "0x2d36BB090231DD6F327D6B4a7c08E5bED0030B3e"
 }

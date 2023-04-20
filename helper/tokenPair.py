@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import List, Optional
 import datetime as dt
 
 
@@ -60,6 +60,7 @@ class TokenPair(BaseModel):
     dex_id: str = Field(..., alias="dexId")
     url: str
     pair_address: str = Field(..., alias="pairAddress")
+    labels: List[str] = None
     base_token: BaseToken = Field(..., alias="baseToken")
     quote_token: QuoteToken = Field(..., alias="quoteToken")
     price_native: float = Field(..., alias="priceNative")
