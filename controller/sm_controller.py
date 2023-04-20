@@ -7,34 +7,39 @@ from helper import (
     current_status,
     get_token_pairs,
     cryptocurrency_info,
-    go_plus_token_info
+    go_plus_token_info,
+    check_honey_pot
 )
 from helper.emoji import emojis
 
 async def user_shillmaster(user_id, username, chat_id, token):
     try:
+        print("shill master")
         pairs = await get_token_pairs(token)
         filtered_pairs = []
         if len(pairs) > 0:
             filtered_pairs = [pair for pair in pairs if pair.base_token.address.lower() == token.lower()]
 
-        pair = None
+        final_filtered_pairs = []
         if len(filtered_pairs) > 0:
-            pair = max(filtered_pairs, key=attrgetter('liquidity.usd'))
-        
+            for filtered_pair in filtered_pairs:
+                if filtered_pair.liquidity != None:
+                    final_filtered_pairs.append(filtered_pair)
+                    
+        pair = None
+        if len(final_filtered_pairs)>0:
+            pair = max(final_filtered_pairs, key=attrgetter('liquidity.usd'))
+
         if pair == None:
             return {"is_rug": True, "reason": "liquidity", "text": "There is no Liquidity for this Token"}
         
         if int(pair.liquidity.usd) < 100:
             text = "There is no Liquidity for "+pair.base_token.symbol+" Token"
             return {"is_rug": True, "reason": "liquidity", "text": text}
-        
-        token_security = await go_plus_token_info(token, pair.chain_id)
-        is_honeypot = False
-        if token_security != None and token_security['is_honeypot'] == "1":
-            is_honeypot = True
-        
-        if is_honeypot:
+
+        honey_result = await check_honey_pot(token, pair)
+
+        if honey_result['is_honeypot']:
             project = {
                 "username": username,
                 "user_id":user_id,

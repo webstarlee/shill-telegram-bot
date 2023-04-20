@@ -4,8 +4,8 @@ import time
 from operator import attrgetter
 from datetime import datetime
 from config import wallet
-from model import Project
-from api import get_token_pairs, cryptocurrency_info, go_plus_token_info
+from model import Project, Holder
+from api import get_token_pairs, cryptocurrency_info, go_plus_token_info, get_token_holder_api, get_token_balance_of_api, run_hoeny_check_api
 
 def format_number_string(number):
     number = float(number)
@@ -101,11 +101,11 @@ def dex_coin_array(pairs, count):
 
 def start_text():
     text = " ShillMasterBot Commands: \n\n"
-    text += "/shill <contract_address>: Add a project recommendation by providing its contract address; the bot tracks the project's performance since your suggestion.\n\n"
-    text += "/shillmaster@Username: View the recommendation history and performance metrics of a specific user.\n\n"
-    text += "/remove_warning@Username: Revoke a user's rug-shilling warning; two warnings result in an automatic group ban.\n\n"
-    text += "/unban@Username: Unban the user who shilled two rugs.\n\n"
-    text += "/advertise: Book advertising for your project to be displayed under the leaderboards."
+    text += "<em>/shillcontract_address</em> : Add a project recommendation by providing its contract address; the bot tracks the project's performance since your suggestion.\n\n"
+    text += "<em>/shillmaster@Username</em> : View the recommendation history and performance metrics of a specific user.\n\n"
+    text += "<em>/remove_warning@Username</em> : Revoke a user's rug-shilling warning; two warnings result in an automatic group ban.\n\n"
+    text += "<em>/unban@Username</em> : Unban the user who shilled two rugs.\n\n"
+    text += "<em>/advertise</em> : Book advertising for your project to be displayed under the leaderboards."
 
     return text
 
@@ -167,3 +167,28 @@ def get_params(origin_text, command):
     param = origin_text.replace(command, "")
     param = param.strip()
     return param
+
+def get_token_holder(token, chain):
+    holder = Holder.find_one({"token": token})
+    holder_address = None
+    if holder != None:
+        balance = get_token_balance_of_api(token, chain, holder['address'])
+        if balance > 1:
+            holder_address = holder['address']
+        else:
+            holder_address = get_token_holder_api(token, chain)
+            Holder.update_one({"_id": holder['_id']},{"$set":{"address": holder_address}})
+    else:
+        holder_address = get_token_holder_api(token, chain)
+        holder = {
+            "address": holder_address,
+            "token": token,
+            "updated_at": datetime.utcnow()
+        }
+        Holder.insert_one(holder)
+    
+    print(holder_address)
+    return holder_address
+
+async def check_honey_pot(token, pair):
+    return await run_hoeny_check_api(pair, token)
