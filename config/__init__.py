@@ -8,13 +8,13 @@ ROOT_PATH = config_path.parent.absolute()
 mongo_url = "mongodb://mongo:0vAcYlPN44ugKCNqFXNc@containers-us-west-203.railway.app:6725"
 mongo_client = MongoClient(mongo_url)
 
-mongo_db = mongo_client['shill_test']
-bot_token = "5980518310:AAH59J2CU_roxuHRfArHzq3HTuB_Dlymp-4"
-leaderboard_id = "-1001894150735"
+# mongo_db = mongo_client['shill_test']
+# bot_token = "5980518310:AAH59J2CU_roxuHRfArHzq3HTuB_Dlymp-4"
+# leaderboard_id = "-1001894150735"
 
-# mongo_db = mongo_client['shillmaster']
-# bot_token = "6127801894:AAExOYxc_EHywwg664RmWGg2myVRThN9mL4"
-# leaderboard_id = "-1001964784230"
+mongo_db = mongo_client['shillmaster']
+bot_token = "6127801894:AAExOYxc_EHywwg664RmWGg2myVRThN9mL4"
+leaderboard_id = "-1001964784230"
 
 #coinmarketcap api
 cmc_key = "8d44a2eb-52eb-4718-8bed-5b21a1eb5747"
