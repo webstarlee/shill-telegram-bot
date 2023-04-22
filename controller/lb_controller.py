@@ -18,6 +18,7 @@ import asyncio
 from helper.emoji import emojis
 
 async def token_update():
+    print("-------------- token update start -----------------")
     black_users=[]
     black_liquidities=[]
     all_pairs = Pair.find()
@@ -32,29 +33,31 @@ async def token_update():
     for token_list in dex_array:
         list_result = await get_token_pairs(token_list)
         dex_results += list_result
+    
+    print("--------dexscreener called success ----------")
+    # for coin_market_id in coin_array:
+    #     cap_result = await cryptocurrency_info_ids(coin_market_id)
+    #     if cap_result != None:
+    #         for single_key in cap_result:
+    #             marketcap_results.append(cap_result[single_key])
 
-    for coin_market_id in coin_array:
-        cap_result = await cryptocurrency_info_ids(coin_market_id)
-        if cap_result != None:
-            for single_key in cap_result:
-                marketcap_results.append(cap_result[single_key])
+    print("--------marektcap api called success ----------")
 
-    for pair in all_pairs:
-        liquidities = [single_dex for single_dex in dex_results if single_dex.base_token.address.lower() == pair['token'].lower()]
-        market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair['coin_market_id']]
-        final_pair = None
-        if len(liquidities)>0:
-            final_pair = max(liquidities, key=attrgetter('liquidity.usd'))
+    pairs = Pair.find()
+    for pair in pairs:
+        final_pair = [single_dex for single_dex in dex_results if single_dex.url.lower() == pair['pair_url'].lower()][0]
+        # market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair['coin_market_id']]
         
         if final_pair != None and final_pair.liquidity.usd>100:
             circulating_supply = None
             now_marketcap = final_pair.fdv
-            if len(market_info)>0:
-                circulating_supply = market_info[0]['self_reported_circulating_supply']
+            # if len(market_info)>0:
+            #     circulating_supply = market_info[0]['self_reported_circulating_supply']
             
-            if circulating_supply != None:
-                now_marketcap = circulating_supply*final_pair.price_usd
+            # if circulating_supply != None:
+            #     now_marketcap = circulating_supply*final_pair.price_usd
             
+            print("updated token marketcap: ",pair['token'], "=>", now_marketcap)
             Pair.find_one_and_update({"_id": pair['_id']}, {"$set": {"marketcap": now_marketcap, "updated_at": datetime.utcnow()}})
         else:
             projects = Project.find({"token": pair['token']})
@@ -77,6 +80,8 @@ async def token_update():
             black_liquidities.append(singl_black_liquidity)
             Pair.find_one_and_delete({'_id': pair['_id']})
     
+
+    print("---------------- finish token update -------------")
     return {"black_users": black_users, "black_liquidities": black_liquidities }
 
 def get_broadcast():
