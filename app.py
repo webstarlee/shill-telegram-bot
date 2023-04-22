@@ -47,6 +47,7 @@ async def start(update, context):
 
 async def leaderboard():
     while True:
+        print('------------------- leaderboard update start ---------------')
         asyncio.get_event_loop().create_task(_leaderboard())
         await asyncio.sleep(100)
 

@@ -75,7 +75,6 @@ async def _leaderboard():
 
     for item in broadcasts:
         text = item['text']
-        text += "<code>UTC:"+datetime.utcnow().strftime("%d/%m/%y")+" "+convert_am_time(datetime.utcnow().strftime("%H"))+":"+datetime.utcnow().strftime("%M")+" "+convert_am_str(datetime.utcnow().strftime("%H"))+"</code>"
         if "message_id" in item:
             try:
                 if reply_markup =="":

@@ -8,7 +8,9 @@ from helper import (
     return_percent,
     get_token_pairs,
     dex_coin_array,
-    user_rug_check
+    user_rug_check,
+    convert_am_time,
+    convert_am_str
 )
 from api import cryptocurrency_info_ids
 from .sm_controller import add_warn
@@ -88,9 +90,10 @@ def get_broadcast():
     two_results = order(projects_two)
     one_results = order(projects_one)
 
-    all_text = "TOP 10 SHILLERS OF ALL TIME\n\n" + broadcast_text(all_results)
-    two_text = "TOP 10 SHILLERS PAST 2 WEEKS\n\n" + broadcast_text(two_results)
-    one_text = "TOP 10 SHILLERS PAST WEEK\n\n" + broadcast_text(one_results)
+    now_text = "<code>UTC:"+datetime.utcnow().strftime("%d/%m/%y")+" "+convert_am_time(datetime.utcnow().strftime("%H"))+":"+datetime.utcnow().strftime("%M")+" "+convert_am_str(datetime.utcnow().strftime("%H"))+"</code>"
+    all_text = "TOP 10 SHILLERS OF ALL TIME\n\n" + broadcast_text(all_results)+now_text
+    two_text = "TOP 10 SHILLERS PAST 2 WEEKS\n\n" + broadcast_text(two_results)+now_text
+    one_text = "TOP 10 SHILLERS PAST WEEK\n\n" + broadcast_text(one_results)+now_text
 
     leaderboard_ids = []
     all_time_leaderbard = Leaderboard.find_one({"type": "all"})
@@ -134,28 +137,29 @@ def order(projects):
     shills = []
     shill_details = []
     result = []
-    for project in projects:
-        if not project['username'] in users:
-            users.append(project['username'])
+    if projects != None:
+        for project in projects:
+            if not project['username'] in users:
+                users.append(project['username'])
 
-        information = Pair.find_one({"token": project['token']})
-        
-        if information != None:
-            if float(information['marketcap'])>float(project['ath_value']):
-                Project.find_one_and_update({"_id": project['_id']}, {"$set": {"ath_value": information['marketcap']}})
+            information = Pair.find_one({"token": project['token']})
+            
+            if information != None:
+                if float(information['marketcap'])>float(project['ath_value']):
+                    Project.find_one_and_update({"_id": project['_id']}, {"$set": {"ath_value": information['marketcap']}})
 
-            user_shill = {
-                "username": project['username'],
-                "token": project['token'],
-                "url": project['url'],
-                "symbol": project['token_symbol'],
-                "marketcap": str(project['marketcap']),
-                "ath": str(project['ath_value']),
-                "created_at": str(project['created_at']),
-                "current_marketcap": information['marketcap'],
-                "percent": return_percent(information['marketcap'], project['marketcap'])
-            }
-            shills.append(user_shill)
+                user_shill = {
+                    "username": project['username'],
+                    "token": project['token'],
+                    "url": project['url'],
+                    "symbol": project['token_symbol'],
+                    "marketcap": str(project['marketcap']),
+                    "ath": str(project['ath_value']),
+                    "created_at": str(project['created_at']),
+                    "current_marketcap": information['marketcap'],
+                    "percent": return_percent(information['marketcap'], project['marketcap'])
+                }
+                shills.append(user_shill)
     
     if len(shills)>0:
         shills = [Shill.parse_obj(single_shill) for single_shill in shills]
