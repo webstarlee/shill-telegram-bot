@@ -117,7 +117,7 @@ def get_token_balance_of_api(token, chain, address):
 
 async def run_hoeny_check_api(pair, token):
     target_token_address = Web3.to_checksum_address(token)
-    from_address = Web3.to_checksum_address("0x94Db7Eb4f72A756d53cEAF244DEebDdAf78c92CE")
+    from_address = Web3.to_checksum_address("0xE556B7494C8809d66494CD23C48bff02e4391dCB")
     router_address = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
     if pair.labels != None and ("v3" in pair.labels or "V3" in pair.labels):
         print("V3")

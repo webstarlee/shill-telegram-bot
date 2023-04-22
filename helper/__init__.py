@@ -35,7 +35,7 @@ async def current_status(project):
         pairs = await get_token_pairs(project['token'])
         filtered_pairs = []
         if len(pairs) > 0:
-            filtered_pairs = [pair for pair in pairs if pair.base_token.address.lower() == project['token'].lower()]
+            filtered_pairs = [pair for pair in pairs if pair.url.lower() == project['url'].lower()]
         
         pair = None
         if len(filtered_pairs)>0:
@@ -60,6 +60,7 @@ async def current_status(project):
         if circulating_supply != 0:
             marketcap = circulating_supply*pair.price_usd
 
+        print(project['token'], ": ",circulating_supply)
         marketcap_percent = marketcap/float(project['marketcap'])
         return {"is_liquidity": True, "marketcap": marketcap, "percent": marketcap_percent}
     except:
