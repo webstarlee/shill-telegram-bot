@@ -164,8 +164,6 @@ async def run_hoeny_check_api(pair, token):
         print("Honeypot !!!!")
         return {"is_honeypot": True, "reason": "fail"}
     
-
-
 async def run_hoeny_tenderly_check_api(from_address, chain, token, router):
     target_token_address = Web3.to_checksum_address(token)
     pair_address = Web3.to_checksum_address(router)
