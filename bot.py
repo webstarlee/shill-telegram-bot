@@ -37,9 +37,12 @@ async def _send_message(chat_id, text, reply_markup="", disable_preview=False):
         return result
 
 async def _block_user(user):
-    await application.bot.ban_chat_member(chat_id=user['chat_id'], user_id=user['user_id'])
-    add_ban_user(user)
-    remove_warn(user['username'])
+    try:
+        await application.bot.ban_chat_member(chat_id=user['chat_id'], user_id=user['user_id'])
+        add_ban_user(user)
+        remove_warn(user['username'])
+    except:
+        await _send_message(chat_id=user['chat_id'], text="Can not ban @"+user['username'])
 
 async def _unblock_user(user, context):
     await context.bot.unban_chat_member(chat_id=user['chat_id'], user_id=user['user_id'])
@@ -75,7 +78,6 @@ async def _leaderboard():
 
     for item in broadcasts:
         text = item['text']
-        text += "<code>UTC:"+datetime.utcnow().strftime("%d/%m/%y")+" "+convert_am_time(datetime.utcnow().strftime("%H"))+":"+datetime.utcnow().strftime("%M")+" "+convert_am_str(datetime.utcnow().strftime("%H"))+"</code>"
         if "message_id" in item:
             try:
                 if reply_markup =="":

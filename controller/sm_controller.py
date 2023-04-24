@@ -145,7 +145,7 @@ def remove_warn(username):
         Warn.find_one_and_delete({"_id": warn_user['_id']})
         text = "Warning removed from @"+username+" ✅"
     else:
-        text = "There is no warn for @"+username+" ✅"
+        text = "Warning removed from @"+username+" ✅"
     
     return text
 

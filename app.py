@@ -30,7 +30,6 @@ from bot import (
 from helper import convert_am_pm
 import asyncio
 
-# logging.basicConfig(level=logging.DEBUG)
 application = ApplicationBuilder().token(bot_token).build()
 NEXT = map(chr, range(10, 22))
 SHOW_HOUR, SHOW_TIME = map(chr, range(8, 10))
@@ -48,6 +47,7 @@ async def start(update, context):
 
 async def leaderboard():
     while True:
+        print('------------------- leaderboard update start ---------------')
         asyncio.get_event_loop().create_task(_leaderboard())
         await asyncio.sleep(100)
 

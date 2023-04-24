@@ -8,7 +8,9 @@ from helper import (
     return_percent,
     get_token_pairs,
     dex_coin_array,
-    user_rug_check
+    user_rug_check,
+    convert_am_time,
+    convert_am_str
 )
 from api import cryptocurrency_info_ids
 from .sm_controller import add_warn
@@ -16,6 +18,7 @@ import asyncio
 from helper.emoji import emojis
 
 async def token_update():
+    print("-------------- token update start -----------------")
     black_users=[]
     black_liquidities=[]
     all_pairs = Pair.find()
@@ -30,20 +33,24 @@ async def token_update():
     for token_list in dex_array:
         list_result = await get_token_pairs(token_list)
         dex_results += list_result
-
+    
+    print("--------dexscreener called success ----------")
     for coin_market_id in coin_array:
         cap_result = await cryptocurrency_info_ids(coin_market_id)
         if cap_result != None:
             for single_key in cap_result:
                 marketcap_results.append(cap_result[single_key])
 
-    for pair in all_pairs:
+    print("--------marektcap api called success ----------")
+
+    pairs = Pair.find()
+    for pair in pairs:
         liquidities = [single_dex for single_dex in dex_results if single_dex.base_token.address.lower() == pair['token'].lower()]
         market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair['coin_market_id']]
         final_pair = None
         if len(liquidities)>0:
             final_pair = max(liquidities, key=attrgetter('liquidity.usd'))
-        
+
         if final_pair != None and final_pair.liquidity.usd>100:
             circulating_supply = None
             now_marketcap = final_pair.fdv
@@ -53,6 +60,7 @@ async def token_update():
             if circulating_supply != None:
                 now_marketcap = circulating_supply*final_pair.price_usd
             
+            print("updated token marketcap: ",pair['token'], "=>", now_marketcap)
             Pair.find_one_and_update({"_id": pair['_id']}, {"$set": {"marketcap": now_marketcap, "updated_at": datetime.utcnow()}})
         else:
             projects = Project.find({"token": pair['token']})
@@ -75,6 +83,8 @@ async def token_update():
             black_liquidities.append(singl_black_liquidity)
             Pair.find_one_and_delete({'_id': pair['_id']})
     
+
+    print("---------------- finish token update -------------")
     return {"black_users": black_users, "black_liquidities": black_liquidities }
 
 def get_broadcast():
@@ -88,9 +98,10 @@ def get_broadcast():
     two_results = order(projects_two)
     one_results = order(projects_one)
 
-    all_text = "TOP 10 SHILLERS OF ALL TIME\n\n" + broadcast_text(all_results)
-    two_text = "TOP 10 SHILLERS PAST 2 WEEKS\n\n" + broadcast_text(two_results)
-    one_text = "TOP 10 SHILLERS PAST WEEK\n\n" + broadcast_text(one_results)
+    now_text = "<code>UTC:"+datetime.utcnow().strftime("%d/%m/%y")+" "+convert_am_time(datetime.utcnow().strftime("%H"))+":"+datetime.utcnow().strftime("%M")+" "+convert_am_str(datetime.utcnow().strftime("%H"))+"</code>"
+    all_text = "TOP 10 SHILLERS OF ALL TIME\n\n" + broadcast_text(all_results)+now_text
+    two_text = "TOP 10 SHILLERS PAST 2 WEEKS\n\n" + broadcast_text(two_results)+now_text
+    one_text = "TOP 10 SHILLERS PAST WEEK\n\n" + broadcast_text(one_results)+now_text
 
     leaderboard_ids = []
     all_time_leaderbard = Leaderboard.find_one({"type": "all"})
@@ -134,28 +145,29 @@ def order(projects):
     shills = []
     shill_details = []
     result = []
-    for project in projects:
-        if not project['username'] in users:
-            users.append(project['username'])
+    if projects != None:
+        for project in projects:
+            if not project['username'] in users:
+                users.append(project['username'])
 
-        information = Pair.find_one({"token": project['token']})
-        
-        if information != None:
-            if float(information['marketcap'])>float(project['ath_value']):
-                Project.find_one_and_update({"_id": project['_id']}, {"$set": {"ath_value": information['marketcap']}})
+            information = Pair.find_one({"token": project['token']})
+            
+            if information != None:
+                if float(information['marketcap'])>float(project['ath_value']):
+                    Project.find_one_and_update({"_id": project['_id']}, {"$set": {"ath_value": information['marketcap']}})
 
-            user_shill = {
-                "username": project['username'],
-                "token": project['token'],
-                "url": project['url'],
-                "symbol": project['token_symbol'],
-                "marketcap": str(project['marketcap']),
-                "ath": str(project['ath_value']),
-                "created_at": str(project['created_at']),
-                "current_marketcap": information['marketcap'],
-                "percent": return_percent(information['marketcap'], project['marketcap'])
-            }
-            shills.append(user_shill)
+                user_shill = {
+                    "username": project['username'],
+                    "token": project['token'],
+                    "url": project['url'],
+                    "symbol": project['token_symbol'],
+                    "marketcap": str(project['marketcap']),
+                    "ath": str(project['ath_value']),
+                    "created_at": str(project['created_at']),
+                    "current_marketcap": information['marketcap'],
+                    "percent": return_percent(information['marketcap'], project['marketcap'])
+                }
+                shills.append(user_shill)
     
     if len(shills)>0:
         shills = [Shill.parse_obj(single_shill) for single_shill in shills]
