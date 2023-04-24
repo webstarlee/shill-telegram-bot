@@ -44,6 +44,8 @@ async def user_shillmaster(user_id, username, chat_id, token):
                 "username": username,
                 "user_id":user_id,
                 "chat_id": chat_id,
+                "chain_id": pair.chain_id,
+                "pair_address": pair.pair_address,
                 "url":pair.url,
                 "token":token,
                 "token_symbol":pair.base_token.symbol,
@@ -80,9 +82,12 @@ async def user_shillmaster(user_id, username, chat_id, token):
             pair_token = {
                 "token":token,
                 "symbol":pair.base_token.symbol,
+                "chain_id": pair.chain_id,
+                "pair_address": pair.pair_address,
                 "pair_url":pair.url,
                 "marketcap":str(marketcap),
                 "coin_market_id":coin_marketcap_id,
+                "circulating_supply": "",
                 "updated_at": datetime.utcnow()
             }
             Pair.insert_one(pair_token)
@@ -102,6 +107,8 @@ async def user_shillmaster(user_id, username, chat_id, token):
                 "username": username,
                 "user_id": user_id,
                 "chat_id": chat_id,
+                "chain_id": pair.chain_id,
+                "pair_address": pair.pair_address,
                 "url": pair.url,
                 "token": token,
                 "token_symbol": pair.base_token.symbol,

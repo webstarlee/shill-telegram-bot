@@ -22,7 +22,8 @@ def user_rug_check(project, reason):
     pair_project = Project.find_one({"_id": project['_id']})
     is_warn = False
     if pair_project != None:
-        Project.update_one({"_id": project['_id']}, {"$set":{"reason": reason}})
+        print("project rug check for: ", pair_project["created_at"])
+        Project.update_one({"_id": project['_id']}, {"$set":{"status": reason}})
         current_time = datetime.utcnow()
         delta = get_time_delta(current_time, pair_project['created_at'])
         if delta <= 30:
@@ -71,34 +72,21 @@ def get_time_delta(time_one, time_two):
     delta_min = delta.seconds/60
     return delta_min
 
-def dex_coin_array(pairs, count):
-    dex_part_array = []
-    coin_market_ids = []
-    dex_part = ''
-    coin_market_part = []
+def make_pair_array(pairs, count):
+    pair_address_chunks= []
+    pair_addresses = []
     index = 1
     for pair in pairs:
-        if dex_part == '':
-            dex_part = pair['token']
-        else:
-            dex_part += ","+pair['token']
-
-        if pair['coin_market_id'] != None:
-            coin_market_part.append(pair['coin_market_id'])
-        
-        if index%20 == 0:
-            dex_part_array.append(dex_part)
-            dex_part = ''
-            coin_market_ids.append(coin_market_part)
-            coin_market_part = []
+        if index%30 == 0:
+            pair_address_chunks.append(pair_addresses)
+            pair_addresses = []
         elif index == count:
-            dex_part_array.append(dex_part)
-            dex_part = ''
-            coin_market_ids.append(coin_market_part)
-            coin_market_part = None
+            pair_address_chunks.append(pair_addresses)
+        else:
+            pair_addresses.append(pair['pair_address'])
         index+=1
     
-    return {"dex_array": dex_part_array, "coin_array": coin_market_ids}
+    return pair_address_chunks
 
 def start_text():
     text = " ShillMasterBot Commands: \n\n"

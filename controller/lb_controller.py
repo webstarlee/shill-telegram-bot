@@ -7,63 +7,59 @@ from helper import (
     format_number_string,
     return_percent,
     get_token_pairs,
-    dex_coin_array,
+    make_pair_array,
     user_rug_check,
     convert_am_time,
     convert_am_str
 )
-from api import cryptocurrency_info_ids
+from api import cryptocurrency_info_ids, cryptocurrency_info, get_pairs_by_pair_address
 from .sm_controller import add_warn
 import asyncio
 from helper.emoji import emojis
 
 async def token_update():
-    print("-------------- token update start -----------------")
     black_users=[]
     black_liquidities=[]
-    all_pairs = Pair.find()
-    count = Pair.count_documents({})
-    dex_coin_results = dex_coin_array(all_pairs, count)
-    dex_array = dex_coin_results['dex_array']
-    coin_array = dex_coin_results['coin_array']
+    eth_pairs = Pair.find({"chain_id": "ethereum"})
+    eth_pairs_count = Pair.count_documents({"chain_id": "ethereum"})
+    bsc_pairs = Pair.find({"chain_id": "bsc"})
+    bsc_pairs_count = Pair.count_documents({"chain_id": "bsc"})
 
-    dex_results = []
-    marketcap_results = []
+    eth_pairs_chunks = make_pair_array(eth_pairs, eth_pairs_count)
+    bsc_pairs_chunks = make_pair_array(bsc_pairs, bsc_pairs_count)
 
-    for token_list in dex_array:
-        list_result = await get_token_pairs(token_list)
-        dex_results += list_result
+    all_pair_results = []
+    for eth_pair_chunk in eth_pairs_chunks:
+        results = await get_pairs_by_pair_address("ethereum", eth_pair_chunk)
+        for single_result in results:
+            all_pair_results.append(single_result)
     
-    print("--------dexscreener called success ----------")
-    for coin_market_id in coin_array:
-        cap_result = await cryptocurrency_info_ids(coin_market_id)
-        if cap_result != None:
-            for single_key in cap_result:
-                marketcap_results.append(cap_result[single_key])
+    for bsc_pair_chunk in bsc_pairs_chunks:
+        results = await get_pairs_by_pair_address("bsc", bsc_pair_chunk)
+        for single_result in results:
+            all_pair_results.append(single_result)
 
-    print("--------marektcap api called success ----------")
-
-    pairs = Pair.find()
-    for pair in pairs:
-        liquidities = [single_dex for single_dex in dex_results if single_dex.base_token.address.lower() == pair['token'].lower()]
-        market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair['coin_market_id']]
-        final_pair = None
+    all_pairs = Pair.find()
+    for pair in all_pairs:
+        liquidities = [single_result for single_result in all_pair_results if single_result.pair_address.lower() == pair['pair_address'].lower()]
+        exist_pair = None
         if len(liquidities)>0:
-            final_pair = max(liquidities, key=attrgetter('liquidity.usd'))
-
-        if final_pair != None and final_pair.liquidity.usd>100:
-            circulating_supply = None
-            now_marketcap = final_pair.fdv
-            if len(market_info)>0:
-                circulating_supply = market_info[0]['self_reported_circulating_supply']
+            exist_pair = liquidities[0]
+        else:
+            check_again = await get_pairs_by_pair_address(pair['chain_id'], [pair['pair_address']])
+            if len(check_again)>0:
+                exist_pair = check_again[0]
+        
+        if exist_pair != None and exist_pair.liquidity.usd>100:
+            now_marketcap = exist_pair.fdv
             
-            if circulating_supply != None:
-                now_marketcap = circulating_supply*final_pair.price_usd
+            if pair['circulating_supply'] != "":
+                now_marketcap = int(pair['circulating_supply'])*exist_pair.price_usd
             
             print("updated token marketcap: ",pair['token'], "=>", now_marketcap)
             Pair.find_one_and_update({"_id": pair['_id']}, {"$set": {"marketcap": now_marketcap, "updated_at": datetime.utcnow()}})
         else:
-            projects = Project.find({"token": pair['token']})
+            projects = Project.find({"pair_address": pair['pair_address']})
             shilled_users = []
             if projects != None:
                 for project in projects:
@@ -76,16 +72,16 @@ async def token_update():
             
             singl_black_liquidity = {
                 "token": pair['token'],
-                "url": pair['pair_url'],
+                "url": pair['url'],
                 "symbol": pair['symbol'],
                 "users": shilled_users
             }
             black_liquidities.append(singl_black_liquidity)
+
             Pair.find_one_and_delete({'_id': pair['_id']})
     
-
     print("---------------- finish token update -------------")
-    return {"black_users": black_users, "black_liquidities": black_liquidities }
+    return {"black_users": black_users, "black_liquidities": black_liquidities}
 
 def get_broadcast():
     two_week_ago = datetime.utcnow() - timedelta(days=14)
@@ -170,7 +166,7 @@ def order(projects):
                 shills.append(user_shill)
     
     if len(shills)>0:
-        shills = [Shill.parse_obj(single_shill) for single_shill in shills]
+        shills = [Shill.parse_obj(single_shill) for single_shill in shills ]
     
     for username in users:
         user_shills = [shill for shill in shills if shill.username == username]

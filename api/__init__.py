@@ -27,6 +27,19 @@ async def get_token_pairs(token):
     except:
         return []
 
+async def get_pairs_by_pair_address(chain, addresses):
+    try:
+        stringed_addresses = ','.join([str(elem) for elem in addresses])
+        dex_url = "https://api.dexscreener.com/latest/dex/pairs/"+chain+"/"+stringed_addresses
+        async with aiohttp.ClientSession() as session:
+            async with session.get(dex_url) as response:
+                result = await response.text()
+                result_array = json.loads(result)
+
+                return [TokenPair.parse_obj(pair) for pair in result_array["pairs"]]
+    except:
+        return []
+
 async def cryptocurrency_info(token):
     try:
         coinmarketcap_url = "https://pro-api.coinmarketcap.com/v2/cryptocurrency/info?address="+token

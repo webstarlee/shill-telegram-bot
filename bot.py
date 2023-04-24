@@ -50,6 +50,7 @@ async def _unblock_user(user, context):
 
 async def _leaderboard():
     black_list = await token_update()
+    print(black_list)
     black_users = black_list['black_users']
     black_liquidities = black_list['black_liquidities']
     if len(black_users)>0:

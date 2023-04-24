@@ -49,7 +49,7 @@ async def leaderboard():
     while True:
         print('------------------- leaderboard update start ---------------')
         asyncio.get_event_loop().create_task(_leaderboard())
-        await asyncio.sleep(100)
+        await asyncio.sleep(300)
 
 async def shill(update, context):
     receive_text = update.message.text
