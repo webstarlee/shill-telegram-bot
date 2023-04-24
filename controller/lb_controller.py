@@ -45,11 +45,11 @@ async def token_update():
 
     pairs = Pair.find()
     for pair in pairs:
-        dex_pairs = [single_dex for single_dex in dex_results if single_dex.url.lower() == pair['pair_url'].lower()]
+        liquidities = [single_dex for single_dex in dex_results if single_dex.base_token.address.lower() == pair['token'].lower()]
         market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair['coin_market_id']]
         final_pair = None
-        if len(dex_pairs)>0:
-            final_pair = dex_pairs[0]
+        if len(liquidities)>0:
+            final_pair = max(liquidities, key=attrgetter('liquidity.usd'))
 
         if final_pair != None and final_pair.liquidity.usd>100:
             circulating_supply = None
