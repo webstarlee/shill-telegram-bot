@@ -84,7 +84,7 @@ async def user_shillmaster(user_id, username, chat_id, token):
                 "symbol":pair.base_token.symbol,
                 "chain_id": pair.chain_id,
                 "pair_address": pair.pair_address,
-                "pair_url":pair.url,
+                "url":pair.url,
                 "marketcap":str(marketcap),
                 "coin_market_id":coin_marketcap_id,
                 "circulating_supply": "",

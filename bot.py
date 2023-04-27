@@ -77,7 +77,9 @@ async def _leaderboard():
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
+    print("sending message")
     for item in broadcasts:
+        print("sending message ...", item['message_id'])
         text = item['text']
         if "message_id" in item:
             try:

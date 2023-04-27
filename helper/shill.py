@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 class Shill(BaseModel):
-    username: str
+    username: str = None
     token: str
     url: str
     symbol: str

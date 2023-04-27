@@ -17,6 +17,12 @@ from .sm_controller import add_warn
 import asyncio
 from helper.emoji import emojis
 
+def rename():
+    pairs = Pair.find({"pair_url": { "$exists": True }})
+    for pair in pairs:
+        Pair.find_one_and_update({"_id": pair['_id']}, {"$rename": {"pair_url": "url"}})
+        
+
 async def token_update():
     black_users=[]
     black_liquidities=[]
@@ -63,7 +69,8 @@ async def token_update():
             shilled_users = []
             if projects != None:
                 for project in projects:
-                    shilled_users.append(project['username'])
+                    if not project['username'] in shilled_users:
+                        shilled_users.append(project['username'])
                     is_warn = user_rug_check(project, 'removed')
                     if is_warn:
                         warn_user = add_warn(project['username'], project['user_id'], project['chat_id'])
