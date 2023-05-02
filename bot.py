@@ -144,7 +144,7 @@ class ShillmasterTelegramBot:
 
     async def leaderboard(self):
         while True:
-            # await asyncio.sleep(100)
+            await asyncio.sleep(100)
             asyncio.create_task(self._leaderboard())
             await asyncio.sleep(100)
             asyncio.create_task(self._leaderboard_check_pair())
