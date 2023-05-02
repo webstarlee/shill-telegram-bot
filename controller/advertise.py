@@ -1,8 +1,14 @@
-from model import Advertise, Invoice
+from models import Advertise, Invoice
 from datetime import datetime, timedelta
-from config import api_key
-from helper import choose_wallet, invoice_hash, get_time_delta
-from moralis import evm_api
+from config import wallet, rpc_urls
+from helpers import invoice_hash
+from web3 import Web3
+
+def get_advertise():
+    now_time = datetime.utcnow()
+    advertise = Advertise.find_one({"start": {"$lte": now_time}, "end": {"$gte": now_time}, "paid": {"$eq": True}})
+
+    return advertise
 
 def new_advertise(data):
     selected_time = int(data['time'])
@@ -23,7 +29,7 @@ def new_advertise(data):
     return advertise
 
 def create_invoice(advertise, symbol, quantity):
-    address = choose_wallet()
+    address = wallet
     hash=invoice_hash()
     invoice = {
         "username": advertise['username'],
@@ -98,18 +104,18 @@ def check_available_hour(time):
     return origin_array
 
 def get_invoice(hash, username):
-    return Invoice.find_one({"hash": hash, "username": username})
+    return Invoice.find_one({"hash": hash, "username": username, "paid": False})
 
 def complete_invoice(data):
     try:
         invoice = Invoice.find_one({"_id": data['invoice_id']})
         if invoice != None:
-            chain = "eth"
+            chain = "ethereum"
             if invoice['symbol'] == "BNB": chain = "bsc"
-            params = {"chain": chain, "transaction_hash": data['transaction']}
-            
-            response = evm_api.transaction.get_transaction(api_key=api_key, params=params)
-            transaction = response
+
+            rpc_url = rpc_urls[chain]
+            web3 = Web3(Web3.HTTPProvider(rpc_url))
+            transaction = web3.eth.get_transaction(data['transaction'])
             value = int(transaction['value'])
             final_value = value/10**18
             if str(transaction['to_address']).lower() == str(invoice['address']).lower() and float(invoice['quantity']) <= float(final_value):
@@ -128,19 +134,3 @@ def edit_advertise(data):
             return advertise
             
     return None
-
-def get_active_advertise():
-    now_time = datetime.utcnow()
-    clear_unpaid_advertise()
-    advertise = Advertise.find_one({"start": {"$lte": now_time}, "end": {"$gte": now_time}, "paid": {"$eq": True}})
-
-    return advertise
-
-def clear_unpaid_advertise():
-    now_time = datetime.utcnow()
-    advertises = Advertise.find({"paid": {"$eq": False}})
-    if advertises != None:
-        for advertise in advertises:
-            delta = get_time_delta(advertise['created_at'], now_time)
-            if int(delta) > 30:
-                Advertise.find_one_and_delete({"_id": advertise['_id']})

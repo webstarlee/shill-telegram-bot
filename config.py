@@ -1,26 +1,16 @@
 from pymongo import MongoClient
 import os
 from pathlib import Path
-from .routers import eth_routers
 
-config_path = Path(os.path.dirname(__file__))
-ROOT_PATH = config_path.parent.absolute()
+ROOT_PATH = Path(os.path.dirname(__file__))
+
 mongo_url = "mongodb://mongo:0vAcYlPN44ugKCNqFXNc@containers-us-west-203.railway.app:6725"
 mongo_client = MongoClient(mongo_url)
-
-# mongo_db = mongo_client['shill_test']
-# bot_token = "5980518310:AAH59J2CU_roxuHRfArHzq3HTuB_Dlymp-4"
-# leaderboard_id = "-1001894150735"
-
 mongo_db = mongo_client['shillmaster']
-bot_token = "6127801894:AAExOYxc_EHywwg664RmWGg2myVRThN9mL4"
-leaderboard_id = "-1001964784230"
 
-#coinmarketcap api
-cmc_key = "8d44a2eb-52eb-4718-8bed-5b21a1eb5747"
-# moralis key
-api_key = 'zr1lLilY41uO0MTVJOOMNIzMrAnbVVSqn4tRUyeicZycPR6LUVMLH2WG71sYkJNt'
-# main wallet
+BOT_TOKEN="6127801894:AAExOYxc_EHywwg664RmWGg2myVRThN9mL4"
+LEADERBOARD_ID = "-1001964784230"
+
 wallet="0x2089b6C05D70EAB5c73721377e3Ad8993e05Ed5A"
 # crypto chains
 chains = {"ethereum": 1, "bsc": 56}
@@ -39,4 +29,11 @@ with open(hoenypot_abi_path) as honeypot_abi_file:
 honey_check_contracts = {
     "ethereum": "0xbF7B21D5529b4B019f1f7Ce5465Ff147463d604D",
     "bsc": "0x2d36BB090231DD6F327D6B4a7c08E5bED0030B3e"
+}
+
+eth_routers={
+    "uniswap": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+    "shibaswap": "0x03f7724180AA6b939894B5Ca4314783B0b36b329",
+    "sushiswap": "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F",
+    "pancakeswap": "0xEfF92A263d31888d860bD50809A8D171709b7b1c"
 }
