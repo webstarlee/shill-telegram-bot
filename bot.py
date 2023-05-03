@@ -163,11 +163,11 @@ class ShillmasterTelegramBot:
     async def _shillmode(self, receive_text, chat_id, context: ContextTypes.DEFAULT_TYPE):
         param = get_params(receive_text, "/shillmode")
         is_shill = True
-        is_shill_str = "On"
+        is_shill_str = "You have to write /shill in front of the contract address."
         logging.info(param)
-        if param == "off":
+        if param.lower() == "off":
             is_shill = False
-            is_shill_str = "Off"
+            is_shill_str = "You don't have to write /shill in front of the contract anymore."
 
         setting = Setting.find_one({"master": "master"})
         if setting != None:
@@ -177,7 +177,7 @@ class ShillmasterTelegramBot:
             setting = {"master": "master","shill_mode": is_shill}
             Setting.insert_one(setting)
         
-        return await context.bot.send_message(chat_id=chat_id, text=f"Shill Mode Turned {is_shill_str}")
+        return await context.bot.send_message(chat_id=chat_id, text=is_shill_str)
 
     async def shillmode(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         receive_text = update.message.text
@@ -189,11 +189,11 @@ class ShillmasterTelegramBot:
     async def _banmode(self, receive_text, chat_id, context: ContextTypes.DEFAULT_TYPE):
         param = get_params(receive_text, "/banmode")
         is_ban = True
-        is_ban_str = "On"
+        is_ban_str = "I will automatically ban users who shill 2 rugs if the admin doesn't remove the warnings."
         logging.info(param)
-        if param == "off":
+        if param.lower() == "off":
             is_ban = False
-            is_ban_str = "Off"
+            is_ban_str = "I will not ban users automatically; users who share rugs will just collect warnings, which will be displayed in the shillmaster status."
 
         setting = Setting.find_one({"master": "master"})
         if setting != None:
@@ -202,7 +202,7 @@ class ShillmasterTelegramBot:
             setting = {"master": "master","ban_mode": is_ban}
             Setting.insert_one(setting)
         
-        return await context.bot.send_message(chat_id=chat_id, text=f"Ban Mode Turned {is_ban_str}")
+        return await context.bot.send_message(chat_id=chat_id, text=is_ban_str)
 
     async def banmode(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         receive_text = update.message.text
@@ -274,17 +274,16 @@ class ShillmasterTelegramBot:
     async def show_token_usage(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         setting = Setting.find_one({"master": "master"})
         receive_text = update.message.text
-        if setting != None:
+        if setting != None and len(receive_text) == 42:
             if setting['shill_mode'] == False:
                 param = get_params(receive_text, "/")
                 param = param.replace("@", "")
+                param = param[:42]
                 asyncio.get_event_loop().create_task(self._shill_off(param, update))
                 return None
-
         return None
     
     async def check_previos_shills(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        print("Hellooooooooooooooooo")
         query = update.callback_query
         receive_text = query.data
         chat_id = update.effective_chat.id
@@ -627,17 +626,17 @@ class ShillmasterTelegramBot:
     def run(self):
         self.application.add_handler(CommandHandler(["start", "help"], self.start))
         self.application.add_handler(CommandHandler("leaderboard", self.show_leaderboard))
-        self.application.add_handler(MessageHandler(filters.Regex("/shillmode@(s)?"), self.shillmode))
-        self.application.add_handler(MessageHandler(filters.Regex("/banmode@(s)?"), self.banmode))
-        self.application.add_handler(MessageHandler(filters.Regex("/shill0x(s)?"), self.shill))
-        self.application.add_handler(MessageHandler(filters.Regex("/shill 0x(s)?"), self.shill))
-        self.application.add_handler(MessageHandler(filters.Regex("/shillmaster@(s)?"), self.shillmaster))
-        self.application.add_handler(MessageHandler(filters.Regex("/shillmaster @(s)?"), self.shillmaster))
-        self.application.add_handler(MessageHandler(filters.Regex("/remove_warning@(s)?"), self.remove_warning))
-        self.application.add_handler(MessageHandler(filters.Regex("/remove_warning @(s)?"), self.remove_warning))
-        self.application.add_handler(MessageHandler(filters.Regex("0x(s)?"), self.show_token_usage))
-        self.application.add_handler(MessageHandler(filters.Regex("/unban@(s)?"), self.unban))
-        self.application.add_handler(MessageHandler(filters.Regex("/unban @(s)?"), self.unban))
+        self.application.add_handler(MessageHandler(filters.Regex("^/shillmode@(s)?"), self.shillmode))
+        self.application.add_handler(MessageHandler(filters.Regex("^/banmode@(s)?"), self.banmode))
+        self.application.add_handler(MessageHandler(filters.Regex("^/shill0x(s)?"), self.shill))
+        self.application.add_handler(MessageHandler(filters.Regex("^/shill 0x(s)?"), self.shill))
+        self.application.add_handler(MessageHandler(filters.Regex("^/shillmaster@(s)?"), self.shillmaster))
+        self.application.add_handler(MessageHandler(filters.Regex("^/shillmaster @(s)?"), self.shillmaster))
+        self.application.add_handler(MessageHandler(filters.Regex("^/remove_warning@(s)?"), self.remove_warning))
+        self.application.add_handler(MessageHandler(filters.Regex("^/remove_warning @(s)?"), self.remove_warning))
+        self.application.add_handler(MessageHandler(filters.Regex("^0x(s)?"), self.show_token_usage))
+        self.application.add_handler(MessageHandler(filters.Regex("^/unban@(s)?"), self.unban))
+        self.application.add_handler(MessageHandler(filters.Regex("^/unban @(s)?"), self.unban))
         self.application.add_handler(CallbackQueryHandler(self.check_previos_shills, pattern="^/check_previous_shill?"))
         self.application.add_handler(ConversationHandler(
             entry_points=[CommandHandler("advertise", self.advertise)],

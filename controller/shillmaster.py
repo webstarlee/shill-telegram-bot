@@ -148,7 +148,7 @@ async def get_user_shillmaster(user):
         index = 1
         for project in user_shills:
             if index > 1:
-                    return_txt  += "=================================\n"
+                    return_txt  += "=======================\n"
             if project['status'] == "active":
                 return_txt += "💰 <a href='"+project['url']+"' >"+project['token_symbol']+"</a> Shared marketcap: $"+format_number_string(project['marketcap'])+"\n"
                 current_info = await current_status(project)
