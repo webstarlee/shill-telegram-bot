@@ -204,7 +204,12 @@ def user_rug_check(project, reason):
     return is_warn
 
 def get_user_warn(username):
-    return Warn.find_one({"username": username})
+    user_warn = Warn.find_one({"username": username})
+    warn_count = 0
+    if user_warn != None:
+        warn_count = user_warn['count']
+        return {"is_warn": True, "count": warn_count}
+    return {"is_warn": False}
 
 def invoice_hash():
     chars = string.ascii_uppercase+string.digits
