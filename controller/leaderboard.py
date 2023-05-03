@@ -78,17 +78,17 @@ async def token_update():
     pairs = list(pairs_cursor)
 
     pairs_chunks = make_pair_array(pairs)
-    pair_mcoin_ids = make_coins_ids(pairs)
+    # pair_mcoin_ids = make_coins_ids(pairs)
 
     eth_pairs_chunks = pairs_chunks['eth']
     bsc_pairs_chunks = pairs_chunks['bsc']
     
-    marketcap_results = []
-    for mcoin_ids in pair_mcoin_ids:
-        cap_result = await cryptocurrency_info_ids(mcoin_ids)
-        if cap_result != None:
-            for single_key in cap_result:
-                marketcap_results.append(cap_result[single_key])
+    # marketcap_results = []
+    # for mcoin_ids in pair_mcoin_ids:
+    #     cap_result = await cryptocurrency_info_ids(mcoin_ids)
+    #     if cap_result != None:
+    #         for single_key in cap_result:
+    #             marketcap_results.append(cap_result[single_key])
     
     all_pair_results = []
     for eth_pair_chunk in eth_pairs_chunks:
@@ -103,7 +103,7 @@ async def token_update():
 
     for pair in pairs:
         liquidities = [single_result for single_result in all_pair_results if single_result.pair_address.lower() == pair['pair_address'].lower()]
-        market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair['coin_market_id']]
+        # market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair['coin_market_id']]
         exist_pair = None
         if len(liquidities)>0:
             exist_pair = liquidities[0]
@@ -114,12 +114,12 @@ async def token_update():
         
         if exist_pair != None and exist_pair.liquidity.usd>100:
             now_marketcap = exist_pair.fdv
-            circulating_supply = None
-            if len(market_info)>0:
-                circulating_supply = market_info[0]['self_reported_circulating_supply']
+            # circulating_supply = None
+            # if len(market_info)>0:
+            #     circulating_supply = market_info[0]['self_reported_circulating_supply']
             
-            if circulating_supply != None:
-                now_marketcap = circulating_supply*exist_pair.price_usd
+            # if circulating_supply != None:
+            #     now_marketcap = circulating_supply*exist_pair.price_usd
             
             logging.info(f"updated token marketcap: {pair['token']} => {now_marketcap}")
             db_insert = threading.Thread(target=pair_marketcap_update, args=(pair, now_marketcap,))

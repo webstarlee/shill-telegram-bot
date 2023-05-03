@@ -1,3 +1,4 @@
+import logging
 from operator import attrgetter
 from datetime import datetime
 from models import Project, Pair, Leaderboard, Warn
@@ -33,10 +34,8 @@ async def user_shillmaster(user_id, username, chat_id, token):
             text = "There is no Liquidity for "+pair.base_token.symbol+" Token"
             return {"is_rug": True, "reason": "liquidity", "text": text}
 
-        print("Hi HI HI")
         honey_result = await hoeny_check_api(token, pair)
 
-        print("-----------Hi HI HI---------------")
         if honey_result['is_honeypot']:
             project = {
                 "username": username,
@@ -58,19 +57,19 @@ async def user_shillmaster(user_id, username, chat_id, token):
 
         bot_txt = ''
         is_new = True
-        marketcap_info = await cryptocurrency_info(token)
-        circulating_supply = 0
+        # marketcap_info = await cryptocurrency_info(token)
+        # circulating_supply = 0
         marketcap = pair.fdv
-        coin_marketcap_id = None
-        if marketcap_info != None:
-            for key in marketcap_info:
-                currency_info = marketcap_info[key]
-                coin_marketcap_id=currency_info['id']
-                if currency_info['self_reported_circulating_supply'] != None:
-                    circulating_supply = currency_info['self_reported_circulating_supply']
+        # coin_marketcap_id = None
+        # if marketcap_info != None:
+        #     for key in marketcap_info:
+        #         currency_info = marketcap_info[key]
+        #         coin_marketcap_id=currency_info['id']
+        #         if currency_info['self_reported_circulating_supply'] != None:
+        #             circulating_supply = currency_info['self_reported_circulating_supply']
 
-        if circulating_supply != 0:
-            marketcap = circulating_supply*pair.price_usd
+        # if circulating_supply != 0:
+        #     marketcap = circulating_supply*pair.price_usd
 
         pair_project = Project.find_one({"username": username, "token": token})
         pair_token = Pair.find_one({"token": token})
@@ -84,8 +83,9 @@ async def user_shillmaster(user_id, username, chat_id, token):
                 "pair_address": pair.pair_address,
                 "url":pair.url,
                 "marketcap":str(marketcap),
-                "coin_market_id":coin_marketcap_id,
+                "coin_market_id": "",
                 "circulating_supply": "",
+                "status": "active",
                 "updated_at": datetime.utcnow()
             }
             Pair.insert_one(pair_token)

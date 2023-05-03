@@ -163,11 +163,11 @@ class ShillmasterTelegramBot:
     async def _shillmode(self, receive_text, chat_id, context: ContextTypes.DEFAULT_TYPE):
         param = get_params(receive_text, "/shillmode")
         is_shill = True
-        is_shill_str = "You have to write /shill in front of the contract address."
+        is_shill_str = "Shillmode Turned On: You have to write /shill in front of the contract address."
         logging.info(param)
         if param.lower() == "off":
             is_shill = False
-            is_shill_str = "You don't have to write /shill in front of the contract anymore."
+            is_shill_str = "Shillmode Turned Off: You don't have to write /shill in front of the contract anymore."
 
         setting = Setting.find_one({"master": "master"})
         if setting != None:
@@ -189,11 +189,11 @@ class ShillmasterTelegramBot:
     async def _banmode(self, receive_text, chat_id, context: ContextTypes.DEFAULT_TYPE):
         param = get_params(receive_text, "/banmode")
         is_ban = True
-        is_ban_str = "I will automatically ban users who shill 2 rugs if the admin doesn't remove the warnings."
+        is_ban_str = "Banmode Turned On: I will automatically ban users who shill 2 rugs if the admin doesn't remove the warnings."
         logging.info(param)
         if param.lower() == "off":
             is_ban = False
-            is_ban_str = "I will not ban users automatically; users who share rugs will just collect warnings, which will be displayed in the shillmaster status."
+            is_ban_str = "Banmode Turned Off: I will not ban users automatically; users who share rugs will just collect warnings, which will be displayed in the shillmaster status."
 
         setting = Setting.find_one({"master": "master"})
         if setting != None:
@@ -211,10 +211,8 @@ class ShillmasterTelegramBot:
 
         return None
     
-    async def _shill(self, receive_text, chat_id, user_id, username):
+    async def _shill(self, param, chat_id, user_id, username):
         logging.info("Hello shill checking")
-        param = get_params(receive_text, "/shill")
-        param = param.replace("@", "")
         response = await user_shillmaster(user_id, username, chat_id, param)
         is_rug = response['is_rug']
         if is_rug:
@@ -228,7 +226,7 @@ class ShillmasterTelegramBot:
 
         payload_txt = response['text']
         keyboard = [
-            [InlineKeyboardButton(text="Check Previous Shills", callback_data=f"/check_previous_shill@{username}")]
+            [InlineKeyboardButton(text="Leaderboard", url="https://t.me/shillmastersleaderboard/150"), InlineKeyboardButton(text="Check Previous Shills", callback_data=f"/check_previous_shill@{username}")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         is_new = response['is_new']
@@ -241,54 +239,34 @@ class ShillmasterTelegramBot:
         await self._send_message(chat_id, payload_txt, reply_markup)
         return str(CHECK_PREVIOUS_SHILLS)
 
-    async def _shill_off(self, param, chat_id, update):
-        pair = token_shillmaster(param)
-        keyboard = [
-            [InlineKeyboardButton(text="Leaderboard", callback_data=f"/leaderboard")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        if pair == None:
-            return await self._send_message(chat_id, f"Nobody shilled token: {param}", reply_markup, True)
-        
-        text = ""
-        for user in pair['user_list']:
-            text += f"@{user} shilled \n"
-        
-        text += f"\nMarketcap: ${format_number_string(pair['marketcap'])}"
-        return await self._send_message(chat_id, text, reply_markup, True)
-
     async def shill(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        receive_text = update.message.text
+        param = get_params(receive_text, "/shill")
+        param = param.replace("@", "")
+        chat_id = update.effective_chat.id
+        user_id = update.effective_user.id
+        username = update.effective_user.username
+        asyncio.get_event_loop().create_task(self._shill(param, chat_id, user_id, username))
+
+        return None
+    
+    async def show_token_usage(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         setting = Setting.find_one({"master": "master"})
         receive_text = update.message.text
         chat_id = update.effective_chat.id
         user_id = update.effective_user.id
         username = update.effective_user.username
-        if setting != None:
-            if setting['shill_mode'] == False:
-                param = get_params(receive_text, "/shill")
-                param = param.replace("@", "")
-                asyncio.get_event_loop().create_task(self._shill_off(param, chat_id, update))
-                return None
-
-        asyncio.get_event_loop().create_task(self._shill(receive_text, chat_id, user_id, username))
-
-        return None
-    
-    async def check_leaderboard(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        asyncio.get_event_loop().create_task(self.show_leaderboard(update, context))
-        return None
-
-    async def show_token_usage(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        setting = Setting.find_one({"master": "master"})
-        receive_text = update.message.text
-        chat_id = update.effective_chat.id
         if setting != None and len(receive_text) == 42:
             if setting['shill_mode'] == False:
                 param = get_params(receive_text, "/")
                 param = param.replace("@", "")
                 param = param[:42]
-                asyncio.get_event_loop().create_task(self._shill_off(param, chat_id, update))
+                asyncio.get_event_loop().create_task(self._shill(param, chat_id, user_id, username))
                 return None
+        return None
+    
+    async def check_leaderboard(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        asyncio.get_event_loop().create_task(self.show_leaderboard(update, context))
         return None
     
     async def check_previos_shills(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
