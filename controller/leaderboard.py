@@ -9,7 +9,11 @@ from apis import get_pairs_by_pair_address, cryptocurrency_info_ids
 
 def pair_marketcap_update(pair, marketcap):
     Pair.find_one_and_update({"_id": pair['_id']}, {"$set": {"marketcap": marketcap, "updated_at": datetime.utcnow()}})
-    Project.update_many({"pair_address": pair['pair_address']}, {"$set": {"ath_value": marketcap}})
+    project_cursor = Project.find({"pair_address": pair['pair_address']})
+    projects = list(project_cursor)
+    for project in projects:
+        if float(project['ath_value']) < float(marketcap):
+            Project.update_one({"_id": project['_id']}, {"$set": {"ath_value": marketcap}})
 
 def update_pair_db_removed():
     Pair.update_many({"status": "removed"}, {"$set": {"broadcast": False}})
@@ -28,12 +32,12 @@ def top_ten_update(all_results, two_results, one_results):
         if not one_result['username'] in user_name_array:
                 user_name_array.append(one_result['username'])
     
-    setting = Setting.find_one({"master": "master"})
+    setting = Setting.find_one({"group_id": "master"})
     if setting != None:
         Setting.find_one_and_update({"_id": setting['_id']}, {"$set": {"top_ten_users": user_name_array}})
     else:
         setting = {
-            "master": "master",
+            "group_id": "master",
             "top_ten_users": user_name_array
         }
         Setting.insert_one(setting)
@@ -78,17 +82,9 @@ async def token_update():
     pairs = list(pairs_cursor)
 
     pairs_chunks = make_pair_array(pairs)
-    # pair_mcoin_ids = make_coins_ids(pairs)
 
     eth_pairs_chunks = pairs_chunks['eth']
     bsc_pairs_chunks = pairs_chunks['bsc']
-    
-    # marketcap_results = []
-    # for mcoin_ids in pair_mcoin_ids:
-    #     cap_result = await cryptocurrency_info_ids(mcoin_ids)
-    #     if cap_result != None:
-    #         for single_key in cap_result:
-    #             marketcap_results.append(cap_result[single_key])
     
     all_pair_results = []
     for eth_pair_chunk in eth_pairs_chunks:
@@ -103,7 +99,6 @@ async def token_update():
 
     for pair in pairs:
         liquidities = [single_result for single_result in all_pair_results if single_result.pair_address.lower() == pair['pair_address'].lower()]
-        # market_info = [single_cap for single_cap in marketcap_results if single_cap['id'] == pair['coin_market_id']]
         exist_pair = None
         if len(liquidities)>0:
             exist_pair = liquidities[0]
@@ -114,13 +109,6 @@ async def token_update():
         
         if exist_pair != None and exist_pair.liquidity.usd>100:
             now_marketcap = exist_pair.fdv
-            # circulating_supply = None
-            # if len(market_info)>0:
-            #     circulating_supply = market_info[0]['self_reported_circulating_supply']
-            
-            # if circulating_supply != None:
-            #     now_marketcap = circulating_supply*exist_pair.price_usd
-            
             logging.info(f"updated token marketcap: {pair['token']} => {now_marketcap}")
             db_insert = threading.Thread(target=pair_marketcap_update, args=(pair, now_marketcap,))
             db_insert.start()
@@ -227,7 +215,7 @@ def broadcast_text(results):
         pair = Pair.find_one({"token": result['project']['token']})
         if pair != None:
             current_marketcap = pair['marketcap']
-        result_text += f"#{str(index)}: @{result['username']}\nTotal {str(round(result['total_percent'], 2))}x AVG: {str(round(result['average_percent'], 2))}x.\n"
+        result_text += f"#{str(index)}: @{result['username']}\nTotal <b>{str(round(result['total_percent'], 2))}x</b>, AVG: <b>{str(round(result['average_percent'], 2))}x</b>.\n"
         result_text += f"👉 <a href='{result['project']['url']}'>{result['project']['token_symbol']}</a> Shared marketcap: ${format_number_string(result['project']['marketcap'])}\n"
         result_text += f"💰 Currently: ${format_number_string(current_marketcap)} ({round(float(current_marketcap)/float(result['project']['marketcap']), 2)}x)\n"
         if float(current_marketcap)<float(result['project']['ath_value']):

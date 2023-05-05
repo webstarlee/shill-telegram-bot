@@ -4,7 +4,7 @@ import time
 import maya
 import datetime
 from web3 import Web3
-from models import Ban, Warn, Project
+from models import Ban, Warn, Project, Admin
 
 def start_text():
     text = " ShillMasterBot Commands: \n\n"
@@ -233,3 +233,13 @@ def convert_am_pm(item):
         status = "PM"
     result_time = str(time_numner)+str(status)
     return result_time
+
+def is_admin(user_id):
+    admin = Admin.find_one({"user_id": user_id})
+    if admin != None:
+        return True
+    
+    return False
+
+def is_address(token):
+    return Web3.is_address(token)

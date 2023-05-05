@@ -23,7 +23,9 @@ from helpers import  (
     remove_warn,
     get_user_warn,
     convert_am_pm,
-    format_number_string
+    format_number_string,
+    is_admin,
+    is_address
 )
 from controller.leaderboard import get_broadcasts, update_leaderboard_message_id, get_removed_pairs, get_leaderboard
 from controller.advertise import (
@@ -37,7 +39,7 @@ from controller.advertise import (
     get_advertise
 )
 from controller.shillmaster import user_shillmaster, token_shillmaster, get_user_shillmaster
-from config import BOT_TOKEN, LEADERBOARD_ID
+from config import BOT_TOKEN, LEADERBOARD_ID, ALLBOARD_ID
 from models import Setting
 
 NEXT = map(chr, range(10, 22))
@@ -164,17 +166,15 @@ class ShillmasterTelegramBot:
         param = get_params(receive_text, "/shillmode")
         is_shill = True
         is_shill_str = "Shillmode Turned On: You have to write /shill in front of the contract address."
-        logging.info(param)
         if param.lower() == "off":
             is_shill = False
             is_shill_str = "Shillmode Turned Off: You don't have to write /shill in front of the contract anymore."
 
-        setting = Setting.find_one({"master": "master"})
+        setting = Setting.find_one({"group_id": chat_id})
         if setting != None:
-            logging.info("shill mode update")
             Setting.find_one_and_update({"_id": setting['_id']}, {"$set": {"shill_mode": is_shill}})
         else:
-            setting = {"master": "master","shill_mode": is_shill}
+            setting = {"group_id": chat_id, "shill_mode": is_shill}
             Setting.insert_one(setting)
         
         return await context.bot.send_message(chat_id=chat_id, text=is_shill_str)
@@ -182,7 +182,10 @@ class ShillmasterTelegramBot:
     async def shillmode(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         receive_text = update.message.text
         chat_id = update.effective_chat.id
-        asyncio.get_event_loop().create_task(self._shillmode(receive_text, chat_id, context))
+        user_id = update.effective_user.id
+        iadmin = is_admin(user_id)
+        if iadmin:
+            asyncio.get_event_loop().create_task(self._shillmode(receive_text, chat_id, context))
 
         return None
 
@@ -195,11 +198,11 @@ class ShillmasterTelegramBot:
             is_ban = False
             is_ban_str = "Banmode Turned Off: I will not ban users automatically; users who share rugs will just collect warnings, which will be displayed in the shillmaster status."
 
-        setting = Setting.find_one({"master": "master"})
+        setting = Setting.find_one({"group_id": chat_id})
         if setting != None:
             Setting.find_one_and_update({"_id": setting['_id']}, {"$set": {"ban_mode": is_ban}})
         else:
-            setting = {"master": "master","ban_mode": is_ban}
+            setting = {"group_id": chat_id, "ban_mode": is_ban}
             Setting.insert_one(setting)
         
         return await context.bot.send_message(chat_id=chat_id, text=is_ban_str)
@@ -207,22 +210,38 @@ class ShillmasterTelegramBot:
     async def banmode(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         receive_text = update.message.text
         chat_id = update.effective_chat.id
-        asyncio.get_event_loop().create_task(self._banmode(receive_text, chat_id, context))
+        user_id = update.effective_user.id
+        is_admin = is_admin(user_id)
+        if is_admin:
+            asyncio.get_event_loop().create_task(self._banmode(receive_text, chat_id, context))
 
         return None
     
     async def _shill(self, param, chat_id, user_id, username):
-        logging.info("Hello shill checking")
+        logging.info(f"Shill token: {param}")
+        isaddress = is_address(param)
+        if isaddress == False:
+            return await self._send_message(chat_id, "Please insert correct token address")
+        
         response = await user_shillmaster(user_id, username, chat_id, param)
         is_rug = response['is_rug']
         if is_rug:
-            user_warn = add_warn(username, user_id, chat_id)
-            text = response['text'] + "\n\n@"+username+" warned: "+str(user_warn['count'])+" Project Rugged ❌"
-            if user_warn['count'] > 1:
-                text = response['text'] + "\n\n@"+username+" Banned: Posted "+str(user_warn['count'])+" Rugs ❌"
-                await self._block_user(user_warn)
-            
-            return await self._send_message(chat_id, text)
+            reason = response['reason']
+            if reason == "chain":
+                text = "Network not supported"
+                return await self._send_message(chat_id, text)
+            elif reason == "dex":
+                text = "Dexrouter not supported"
+                return await self._send_message(chat_id, text)
+            else:
+                logging.info("Token Rugged!")
+                user_warn = add_warn(username, user_id, chat_id)
+                text = response['text'] + "\n\n@"+username+" warned: "+str(user_warn['count'])+" Project Rugged ❌"
+                if user_warn['count'] > 1:
+                    text = response['text'] + "\n\n@"+username+" Banned: Posted "+str(user_warn['count'])+" Rugs ❌"
+                    await self._block_user(user_warn)
+                
+                return await self._send_message(chat_id, text)
 
         payload_txt = response['text']
         keyboard = [
@@ -231,7 +250,8 @@ class ShillmasterTelegramBot:
         reply_markup = InlineKeyboardMarkup(keyboard)
         is_new = response['is_new']
         if is_new:
-            setting = Setting.find_one({"master": "master"})
+            # await self._send_message(ALLBOARD_ID, payload_txt)
+            setting = Setting.find_one({"group_id": "master"})
             if setting != None:
                 if username in setting['top_ten_users']:
                     await self._send_message(LEADERBOARD_ID, payload_txt)
@@ -251,7 +271,7 @@ class ShillmasterTelegramBot:
         return None
     
     async def show_token_usage(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        setting = Setting.find_one({"master": "master"})
+        setting = Setting.find_one({"group_id": "master"})
         receive_text = update.message.text
         chat_id = update.effective_chat.id
         user_id = update.effective_user.id

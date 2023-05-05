@@ -3,6 +3,7 @@ from operator import attrgetter
 from datetime import datetime
 from models import Project, Pair, Leaderboard, Warn
 from apis import get_token_pairs, cryptocurrency_info, hoeny_check_api
+from config import dex_ids
 from helpers import (
     format_number_string,
     get_percent,
@@ -17,10 +18,31 @@ async def user_shillmaster(user_id, username, chat_id, token):
         if len(pairs) > 0:
             filtered_pairs = [pair for pair in pairs if pair.base_token.address.lower() == token.lower()]
 
-        final_filtered_pairs = []
+        chain_filters = []
         if len(filtered_pairs) > 0:
             for filtered_pair in filtered_pairs:
-                if filtered_pair.liquidity != None:
+                if filtered_pair.chain_id == "ethereum" or filtered_pair.chain_id == "bsc":
+                    chain_filters.append(filtered_pair)
+
+        if len(chain_filters)==0:
+            return {"is_rug": True, "reason": "chain"}
+        
+        dex_filters = []
+        if len(chain_filters) > 0:
+            for chain_filtered_pair in chain_filters:
+                if chain_filtered_pair.dex_id in dex_ids:
+                    if chain_filtered_pair.labels != None and ("v3" in chain_filtered_pair.labels or "V3" in chain_filtered_pair.labels):
+                        print("V3")
+                    else:
+                        dex_filters.append(chain_filtered_pair)
+        
+        if len(dex_filters)==0:
+            return {"is_rug": True, "reason": "dex"}
+
+        final_filtered_pairs = []
+        if len(dex_filters) > 0:
+            for filtered_pair in dex_filters:
+                if filtered_pair.liquidity != None and (filtered_pair.chain_id == "ethereum" or filtered_pair.chain_id == "bsc"):
                     final_filtered_pairs.append(filtered_pair)
                     
         pair = None

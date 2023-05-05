@@ -1,7 +1,7 @@
 import json
 import logging
 from datetime import datetime, timedelta
-from models import Pair, Project, Warn, Setting, Leaderboard
+from models import Pair, Project, Warn, Setting, Leaderboard, Admin
 from apis import cryptocurrency_info
 
 def database_to_json():
@@ -106,3 +106,41 @@ def pair_update_status():
         Pair.find_one_and_update({"_id": pair['_id']}, {"$set": {"status": "active"}})
     
     logging.info("Done")
+
+def ath_update():
+    project_cursor = Project.find()
+    projects = list(project_cursor)
+    for project in projects:
+        if float(project['ath_value']) < float(project['marketcap']):
+            logging.info(f"Update ath for : {project['token']}")
+            Project.find_one_and_update({"_id": project['_id']}, {"$set": {"ath_value": project['marketcap']}})
+
+def admins():
+    admin_dbs = []
+    webstar = {"username": "webstarlee", "user_id": 5887308508}
+    aleek = {"username": "aLeekk0", "user_id": 1533375074}
+    kaan = {"username": "KaanApes", "user_id": 5191683494}
+    admin_dbs.append(webstar)
+    admin_dbs.append(aleek)
+    admin_dbs.append(kaan)
+    for single_data in admin_dbs:
+        admin = Admin.find_one({'user_id': single_data['user_id']})
+        if admin == None:
+            Admin.insert_one(single_data)
+
+def master_setting():
+    setting = Setting.find_one({"group_id": "master"})
+    if setting == None:
+        setting = {
+            "group_id": "master",
+            "top_ten_users": [],
+            "shill_mode": True,
+            "ban_mode": True
+        }
+        Setting.insert_one(setting)
+
+def mongo_db_init():
+    # ath_update()
+    admins()
+    master_setting()
+    
