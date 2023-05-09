@@ -189,7 +189,6 @@ async def get_user_shillmaster(user):
             if project['status'] == "removed":
                 return_txt += f"💰 <a href='{project['url']}' >{project['token_symbol']}</a> Shared marketcap: ${format_number_string(project['marketcap'])}\n"
                 return_txt += "⚠️ Currently: Liquidity removed\n"
-                return_txt += f"🏆 ATH: ${format_number_string(project['ath_value'])} ({get_percent(project['ath_value'], project['marketcap'])}x)\n"
             
             if project['status'] == "no_liquidity":
                 return_txt += f"💰 <a href='{project['url']}' >{project['token_symbol']}</a> has no Liquidity\n"

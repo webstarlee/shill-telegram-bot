@@ -1,7 +1,7 @@
 
 import logging
 import telegram
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, constants
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -629,9 +629,120 @@ class ShillmasterTelegramBot:
         context.user_data['invoice_id'] = None
         return END
 
+    def is_group_chat(self, update: Update) -> bool:
+        """
+        Checks if the message was sent from a group chat
+        """
+        return update.effective_chat.type in [
+            constants.ChatType.GROUP,
+            constants.ChatType.SUPERGROUP
+        ]
+
+    async def show_setting_ui(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        chat_id = update.effective_chat.id
+        user_id = update.effective_user.id
+        iadmin = is_admin(user_id)
+        is_group = self.is_group_chat(update)
+
+        if iadmin:
+            setting = Setting.find_one({"group_id": "master"})
+            if is_group:
+                setting = Setting.find_one({"group_id": chat_id})
+            
+            shill_mode = True
+            ban_mode = True
+            if setting != None:
+                shill_mode = setting['shill_mode']
+                ban_mode = setting['ban_mode']
+            
+            shill_mode_txt = "On"
+            shill_mode_next_txt = "Off"
+            if shill_mode == False:
+                shill_mode_txt = "Off"
+                shill_mode_next_txt = "On"
+            ban_mode_txt = "On"
+            ban_mode_next_txt = "Off"
+            if ban_mode == False:
+                ban_mode_txt = "Off"
+                ban_mode_next_txt = "On"
+            
+            text = f"You can controll setting with below buttons.\n\nShill mode Turned {shill_mode_txt}\nBan mode Turned {ban_mode_txt}\n"
+            keyboard = [
+                [
+                    InlineKeyboardButton(text=f"Shill mode Turn {shill_mode_next_txt}", callback_data=f"/shill_mode_{shill_mode_next_txt}"),
+                    InlineKeyboardButton(text=f"Ban mode Turn {ban_mode_next_txt}", callback_data=f"/ban_mode_{ban_mode_next_txt}")
+                ],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            await self._send_message(chat_id, text, reply_markup)
+
+            return None
+        
+    async def setting_shillmode(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        query = update.callback_query
+        receive_text = query.data
+        chat_id = update.effective_chat.id
+        user_id = update.effective_user.id
+        param = get_params(receive_text, "/shill_mode_")
+        param = param.replace("@", "")
+        iadmin = is_admin(user_id)
+        is_group = self.is_group_chat(update)
+        if iadmin:
+            setting = Setting.find_one({"group_id": "master"})
+            if is_group:
+                setting = Setting.find_one({"group_id": chat_id})
+            
+            is_shill = True
+            is_shill_str = "Shillmode Turned On: You have to write /shill in front of the contract address."
+            if param.lower() == "off":
+                is_shill = False
+                is_shill_str = "Shillmode Turned Off: You don't have to write /shill in front of the contract anymore."
+            
+            if setting != None:
+                Setting.find_one_and_update({"_id": setting['_id']}, {"$set": {"shill_mode": is_shill}})
+            else:
+                setting = {"group_id": chat_id, "shill_mode": is_shill}
+                Setting.insert_one(setting)
+            
+            return await context.bot.send_message(chat_id=chat_id, text=is_shill_str)
+
+        return None
+
+    async def setting_banmode(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        query = update.callback_query
+        receive_text = query.data
+        chat_id = update.effective_chat.id
+        user_id = update.effective_user.id
+        param = get_params(receive_text, "/ban_mode_")
+        param = param.replace("@", "")
+        iadmin = is_admin(user_id)
+        is_group = self.is_group_chat(update)
+        if iadmin:
+            setting = Setting.find_one({"group_id": "master"})
+            if is_group:
+                setting = Setting.find_one({"group_id": chat_id})
+            
+            is_ban = True
+            is_ban_str = "Banmode Turned On: I will automatically ban users who shill 2 rugs if the admin doesn't remove the warnings."
+            if param.lower() == "off":
+                is_ban = False
+                is_ban_str = "Banmode Turned Off: I will not ban users automatically; users who share rugs will just collect warnings, which will be displayed in the shillmaster status."
+            
+            if setting != None:
+                Setting.find_one_and_update({"_id": setting['_id']}, {"$set": {"ban_mode": is_ban}})
+            else:
+                setting = {"group_id": chat_id, "ban_mode": is_ban}
+                Setting.insert_one(setting)
+            
+            return await context.bot.send_message(chat_id=chat_id, text=is_ban_str)
+
+        return None
+
     def run(self):
         self.application.add_handler(CommandHandler(["start", "help"], self.start))
         self.application.add_handler(CommandHandler("leaderboard", self.show_leaderboard))
+        self.application.add_handler(CommandHandler("settings", self.show_setting_ui))
         self.application.add_handler(MessageHandler(filters.Regex("^/shillmode@(s)?"), self.shillmode))
         self.application.add_handler(MessageHandler(filters.Regex("^/banmode@(s)?"), self.banmode))
         self.application.add_handler(MessageHandler(filters.Regex("^/shill0x(s)?"), self.shill))
@@ -645,6 +756,8 @@ class ShillmasterTelegramBot:
         self.application.add_handler(MessageHandler(filters.Regex("^/unban @(s)?"), self.unban))
         self.application.add_handler(CallbackQueryHandler(self.check_previos_shills, pattern="^/check_previous_shill?"))
         self.application.add_handler(CallbackQueryHandler(self.check_leaderboard, pattern="^/leaderboard?"))
+        self.application.add_handler(CallbackQueryHandler(self.setting_shillmode, pattern="^/shill_mode_?"))
+        self.application.add_handler(CallbackQueryHandler(self.setting_banmode, pattern="^/ban_mode_?"))
         self.application.add_handler(ConversationHandler(
             entry_points=[CommandHandler("advertise", self.advertise)],
             states={
