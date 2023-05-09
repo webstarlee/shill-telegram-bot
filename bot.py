@@ -272,7 +272,7 @@ class ShillmasterTelegramBot:
         reply_markup = InlineKeyboardMarkup(keyboard)
         is_new = response['is_new']
         if is_new:
-            # await self._send_message(ALLBOARD_ID, payload_txt)
+            await self._send_message(ALLBOARD_ID, payload_txt)
             setting = Setting.find_one({"group_id": "master"})
             if setting != None:
                 if username in setting['top_ten_users']:
