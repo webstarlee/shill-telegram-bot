@@ -164,20 +164,26 @@ class ShillmasterTelegramBot:
     
     async def _shillmode(self, receive_text, chat_id, context: ContextTypes.DEFAULT_TYPE):
         param = get_params(receive_text, "/shillmode")
-        is_shill = True
+        is_shill = None
         is_shill_str = "Shillmode Turned On: You have to write /shill in front of the contract address."
         if param.lower() == "off":
             is_shill = False
             is_shill_str = "Shillmode Turned Off: You don't have to write /shill in front of the contract anymore."
+        elif param.lower() == "on":
+            is_shill = True
+            is_shill_str = "Shillmode Turned On: You have to write /shill in front of the contract address."
 
-        setting = Setting.find_one({"group_id": chat_id})
-        if setting != None:
-            Setting.find_one_and_update({"_id": setting['_id']}, {"$set": {"shill_mode": is_shill}})
-        else:
-            setting = {"group_id": chat_id, "shill_mode": is_shill}
-            Setting.insert_one(setting)
-        
-        return await context.bot.send_message(chat_id=chat_id, text=is_shill_str)
+        if is_shill != None:
+            setting = Setting.find_one({"group_id": chat_id})
+            if setting != None:
+                Setting.find_one_and_update({"_id": setting['_id']}, {"$set": {"shill_mode": is_shill}})
+            else:
+                setting = {"group_id": chat_id, "shill_mode": is_shill}
+                Setting.insert_one(setting)
+            
+            return await context.bot.send_message(chat_id=chat_id, text=is_shill_str)
+    
+        return None
 
     async def shillmode(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         receive_text = update.message.text
@@ -191,21 +197,25 @@ class ShillmasterTelegramBot:
 
     async def _banmode(self, receive_text, chat_id, context: ContextTypes.DEFAULT_TYPE):
         param = get_params(receive_text, "/banmode")
-        is_ban = True
+        is_ban = None
         is_ban_str = "Banmode Turned On: I will automatically ban users who shill 2 rugs if the admin doesn't remove the warnings."
         logging.info(param)
         if param.lower() == "off":
             is_ban = False
             is_ban_str = "Banmode Turned Off: I will not ban users automatically; users who share rugs will just collect warnings, which will be displayed in the shillmaster status."
+        elif param.lower() == "on":
+            is_ban = True
+            is_ban_str = "Banmode Turned On: I will automatically ban users who shill 2 rugs if the admin doesn't remove the warnings."
 
-        setting = Setting.find_one({"group_id": chat_id})
-        if setting != None:
-            Setting.find_one_and_update({"_id": setting['_id']}, {"$set": {"ban_mode": is_ban}})
-        else:
-            setting = {"group_id": chat_id, "ban_mode": is_ban}
-            Setting.insert_one(setting)
-        
-        return await context.bot.send_message(chat_id=chat_id, text=is_ban_str)
+        if is_ban != None:
+            setting = Setting.find_one({"group_id": chat_id})
+            if setting != None:
+                Setting.find_one_and_update({"_id": setting['_id']}, {"$set": {"ban_mode": is_ban}})
+            else:
+                setting = {"group_id": chat_id, "ban_mode": is_ban}
+                Setting.insert_one(setting)
+            
+            return await context.bot.send_message(chat_id=chat_id, text=is_ban_str)
 
     async def banmode(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         receive_text = update.message.text
@@ -292,12 +302,19 @@ class ShillmasterTelegramBot:
     async def check_previos_shills(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         query = update.callback_query
         receive_text = query.data
-        chat_id = update.effective_chat.id
         param = get_params(receive_text, "/check_previous_shill")
         param = param.replace("@", "")
-        asyncio.get_event_loop().create_task(self._shillmaster(param, chat_id))
+        asyncio.get_event_loop().create_task(self._shillmaster_check(param, update))
         print("show shillmaster status")
         return None
+
+    async def _shillmaster_check(self, param, update: Update):
+        payload_txt = await get_user_shillmaster(param)
+        warn = get_user_warn(param)
+        if warn['is_warn']:
+            payload_txt += f"\n⚠️ Has {warn['count']} Warning ⚠️"
+
+        return await update.callback_query.edit_message_text(text=payload_txt, parse_mode='HTML', disable_web_page_preview=True)
 
     async def _shillmaster(self, param, chat_id):
         payload_txt = await get_user_shillmaster(param)
