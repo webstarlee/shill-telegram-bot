@@ -245,6 +245,8 @@ class ShillmasterTelegramBot:
         if isaddress == False:
             return await self._send_message(chat_id, "Please insert correct token address")
         
+        if username == None:
+            return None
         response = await user_shillmaster(user_id, username, chat_id, param)
         is_rug = response['is_rug']
         if is_rug:
