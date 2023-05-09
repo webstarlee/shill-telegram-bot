@@ -281,13 +281,16 @@ class ShillmasterTelegramBot:
         return None
     
     async def show_token_usage(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        setting = Setting.find_one({"group_id": "master"})
         receive_text = update.message.text
         chat_id = update.effective_chat.id
         user_id = update.effective_user.id
         username = update.effective_user.username
+        setting = Setting.find_one({"group_id": chat_id})
+        if setting == None:
+            setting = Setting.find_one({"group_id": "master"})
+            
         if setting != None and len(receive_text) == 42:
-            if setting['shill_mode'] == False:
+            if setting['shill_mode'] == True:
                 param = get_params(receive_text, "/")
                 param = param.replace("@", "")
                 param = param[:42]
