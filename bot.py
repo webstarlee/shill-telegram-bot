@@ -162,8 +162,9 @@ class ShillmasterTelegramBot:
         text = start_text()
         await context.bot.send_message(chat_id=chat_id, text=text, parse_mode='HTML')
     
-    async def _shillmode(self, receive_text, chat_id, context: ContextTypes.DEFAULT_TYPE):
+    async def _shillmode(self, receive_text, chat_id, context: ContextTypes.DEFAULT_TYPE, update: Update):
         param = get_params(receive_text, "/shillmode")
+        is_group = self.is_group_chat(update)
         is_shill = None
         is_shill_str = "Shillmode Turned On: You have to write /shill in front of the contract address."
         if param.lower() == "off":
@@ -174,11 +175,16 @@ class ShillmasterTelegramBot:
             is_shill_str = "Shillmode Turned On: You have to write /shill in front of the contract address."
 
         if is_shill != None:
-            setting = Setting.find_one({"group_id": chat_id})
+            setting = Setting.find_one({"group_id": "master"})
+            if is_group:
+                setting = Setting.find_one({"group_id": chat_id})
+
             if setting != None:
                 Setting.find_one_and_update({"_id": setting['_id']}, {"$set": {"shill_mode": is_shill}})
             else:
-                setting = {"group_id": chat_id, "shill_mode": is_shill}
+                setting = {"group_id": "master", "shill_mode": is_shill}
+                if is_group:
+                    setting = {"group_id": chat_id, "shill_mode": is_shill}
                 Setting.insert_one(setting)
             
             return await context.bot.send_message(chat_id=chat_id, text=is_shill_str)
@@ -191,12 +197,13 @@ class ShillmasterTelegramBot:
         user_id = update.effective_user.id
         iadmin = is_admin(user_id)
         if iadmin:
-            asyncio.get_event_loop().create_task(self._shillmode(receive_text, chat_id, context))
+            asyncio.get_event_loop().create_task(self._shillmode(receive_text, chat_id, context, update))
 
         return None
 
-    async def _banmode(self, receive_text, chat_id, context: ContextTypes.DEFAULT_TYPE):
+    async def _banmode(self, receive_text, chat_id, context: ContextTypes.DEFAULT_TYPE, update: Update):
         param = get_params(receive_text, "/banmode")
+        is_group = self.is_group_chat(update)
         is_ban = None
         is_ban_str = "Banmode Turned On: I will automatically ban users who shill 2 rugs if the admin doesn't remove the warnings."
         logging.info(param)
@@ -208,11 +215,16 @@ class ShillmasterTelegramBot:
             is_ban_str = "Banmode Turned On: I will automatically ban users who shill 2 rugs if the admin doesn't remove the warnings."
 
         if is_ban != None:
-            setting = Setting.find_one({"group_id": chat_id})
+            setting = Setting.find_one({"group_id": "master"})
+            if is_group:
+                setting = Setting.find_one({"group_id": chat_id})
+
             if setting != None:
                 Setting.find_one_and_update({"_id": setting['_id']}, {"$set": {"ban_mode": is_ban}})
             else:
-                setting = {"group_id": chat_id, "ban_mode": is_ban}
+                setting = {"group_id": "master", "ban_mode": is_ban}
+                if is_group:
+                    setting = {"group_id": chat_id, "ban_mode": is_ban}
                 Setting.insert_one(setting)
             
             return await context.bot.send_message(chat_id=chat_id, text=is_ban_str)
@@ -223,7 +235,7 @@ class ShillmasterTelegramBot:
         user_id = update.effective_user.id
         is_admin = is_admin(user_id)
         if is_admin:
-            asyncio.get_event_loop().create_task(self._banmode(receive_text, chat_id, context))
+            asyncio.get_event_loop().create_task(self._banmode(receive_text, chat_id, context, update))
 
         return None
     
@@ -288,9 +300,9 @@ class ShillmasterTelegramBot:
         setting = Setting.find_one({"group_id": chat_id})
         if setting == None:
             setting = Setting.find_one({"group_id": "master"})
-            
+
         if setting != None and len(receive_text) == 42:
-            if setting['shill_mode'] == True:
+            if setting['shill_mode'] == False:
                 param = get_params(receive_text, "/")
                 param = param.replace("@", "")
                 param = param[:42]
