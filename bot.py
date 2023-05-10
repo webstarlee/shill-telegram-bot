@@ -141,15 +141,15 @@ class ShillmasterTelegramBot:
         removed_pairs = get_removed_pairs()
         if len(removed_pairs)>0:
             for removed_pair_text in removed_pairs:
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(5)
                 await self.application.bot.send_message(chat_id=LEADERBOARD_ID, text=removed_pair_text, parse_mode='HTML')
 
     async def leaderboard(self):
         while True:
-            await asyncio.sleep(100)
+            await asyncio.sleep(150)
             asyncio.create_task(self._leaderboard())
-            await asyncio.sleep(100)
             asyncio.create_task(self._leaderboard_check_pair())
+            await asyncio.sleep(150)
 
     async def show_leaderboard(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         leaderboard_text = get_leaderboard()

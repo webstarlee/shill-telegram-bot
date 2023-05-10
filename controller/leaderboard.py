@@ -16,6 +16,7 @@ def pair_marketcap_update(pair, marketcap):
             Project.update_one({"_id": project['_id']}, {"$set": {"ath_value": marketcap}})
 
 def update_pair_db_removed():
+    logging.info("broadcast to False")
     Pair.update_many({"status": "removed"}, {"$set": {"broadcast": False}})
 
 def top_ten_update(all_results, two_results, one_results):
@@ -113,6 +114,7 @@ async def token_update():
             db_insert = threading.Thread(target=pair_marketcap_update, args=(pair, now_marketcap,))
             db_insert.start()
         else:
+            logging.info(f"token Rugged: {pair['token']}")
             rug_check = threading.Thread(target=user_rug_check, args=(pair,))
             rug_check.start()
 
@@ -260,8 +262,8 @@ def get_removed_pairs():
                     text += "@"+black_username+", "
             removed_pairs_details_text.append(text)
     
-    pair_db_clear = threading.Thread(target=update_pair_db_removed)
-    pair_db_clear.start()
+    update_pair_db_removed()
+    
     return removed_pairs_details_text
 
 def get_leaderboard():
