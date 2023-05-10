@@ -143,4 +143,18 @@ def mongo_db_init():
     # ath_update()
     admins()
     master_setting()
+
+def project_backup():
+    project_cursor = Project.find({"status": "removed"})
+    projects = list(project_cursor)
+    for project in projects:
+        logging.info(f"Update project for : {project['_id']}")
+        Project.find_one_and_update({"_id": project['_id']}, {"$set": {"status": "active"}})
+
+def pair_project_match():
+    pair_cursor = Pair.find({"status": "removed"})
+    pairs = list(pair_cursor)
+    for pair in pairs:
+        logging.info(f"Update project for : {pair['_id']}")
+        Project.update_many({"pair_address": pair['pair_address']}, {"$set": {"status": "removed"}})
     
