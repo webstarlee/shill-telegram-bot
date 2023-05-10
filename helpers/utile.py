@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 from models import Pair, Project, Warn, Setting, Leaderboard, Admin
-from apis import cryptocurrency_info
+from apis import cryptocurrency_info, get_pairs_by_pair_address
 
 def database_to_json():
     projects_cursor = Project.find()
@@ -157,4 +157,26 @@ def pair_project_match():
     for pair in pairs:
         logging.info(f"Update project for : {pair['_id']}")
         Project.update_many({"pair_address": pair['pair_address']}, {"$set": {"status": "removed"}})
+
+async def pair_removed_check_again():
+    pair_cursor = Pair.find({"status": "removed"})
+    pairs = list(pair_cursor)
+    for pair in pairs:
+        check_again = await get_pairs_by_pair_address(pair['chain_id'], [pair['pair_address']])
+        if len(check_again)>0:
+            exist_pair = check_again[0]
+            if exist_pair != None and exist_pair.liquidity.usd>100:
+                logging.info(f"Pair come back: {pair['_id']}")
+                Pair.find_one_and_update({"_id": pair['_id']}, {"$set": {"status": "active"}})
+                Project.update_many({"pair_address": pair['pair_address']}, {"$set": {"status": "active"}})
     
+async def project_db_fix():
+    project_cursor = Project.find()
+    projects = list(project_cursor)
+    for project in projects:
+        if float(project['marketcap']) < 1:
+            result = await get_pairs_by_pair_address(project['chain_id'], [project['pair_address']])
+            if len(result)>0:
+                dex = result[0]
+                logging.info(f"Project marketcap fixed: {project['pair_address']}")
+                Project.find_one_and_update({"_id": project['_id']}, {"$set": {"marketcap": dex.fdv}})

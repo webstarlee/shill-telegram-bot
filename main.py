@@ -2,15 +2,13 @@ import logging
 from bot import ShillmasterTelegramBot
 import asyncio
 from controller.leaderboard import token_update
-from helpers.utile import pair_project_match
+from helpers.utile import project_db_fix
 
 async def database_update():
     while True:
-        # pair_project_match()
-        # logging.info("callededed")
-        # await asyncio.sleep(10)
+        # await project_db_fix()
         await token_update()
-        await asyncio.sleep(500)
+        await asyncio.sleep(600)
 
 def main():
     logging.basicConfig(

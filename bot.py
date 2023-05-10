@@ -148,8 +148,9 @@ class ShillmasterTelegramBot:
         while True:
             await asyncio.sleep(150)
             asyncio.create_task(self._leaderboard())
+            await asyncio.sleep(100)
             asyncio.create_task(self._leaderboard_check_pair())
-            await asyncio.sleep(150)
+            await asyncio.sleep(100)
 
     async def show_leaderboard(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         leaderboard_text = get_leaderboard()

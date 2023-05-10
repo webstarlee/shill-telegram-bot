@@ -103,7 +103,9 @@ async def token_update():
         exist_pair = None
         if len(liquidities)>0:
             exist_pair = liquidities[0]
-        else:
+        
+        if exist_pair == None:
+            logging.info(f"Check again Dexpair: {pair['pair_address']}")
             check_again = await get_pairs_by_pair_address(pair['chain_id'], [pair['pair_address']])
             if len(check_again)>0:
                 exist_pair = check_again[0]

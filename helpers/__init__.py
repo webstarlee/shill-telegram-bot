@@ -61,7 +61,7 @@ def make_pair_array(pairs):
     eth_count = len(eth_pairs_array)
     for index, eth_pair in enumerate(eth_pairs_array):
         _index = index+1
-        if _index%30 == 0:
+        if _index%15 == 0:
             eth_pairs_chunks.append(eth_pair_addresses)
             eth_pair_addresses = []
         elif _index == eth_count:
@@ -74,7 +74,7 @@ def make_pair_array(pairs):
     bsc_count = len(bsc_pairs_array)
     for index, bsc_pair in enumerate(bsc_pairs_array):
         _index = index+1
-        if _index%30 == 0:
+        if _index%15 == 0:
             bsc_pairs_chunks.append(bsc_pair_addresses)
             bsc_pair_addresses = []
         elif _index == bsc_count:
