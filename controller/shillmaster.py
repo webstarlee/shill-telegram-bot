@@ -93,8 +93,8 @@ async def user_shillmaster(user_id, username, chat_id, token):
         # if circulating_supply != 0:
         #     marketcap = circulating_supply*pair.price_usd
 
-        pair_project = Project.find_one({"username": username, "token": token})
-        pair_token = Pair.find_one({"token": token})
+        pair_project = Project.find_one({"username": username, "pair_address": pair.pair_address})
+        pair_token = Pair.find_one({"pair_address": pair.pair_address})
         if pair_token != None:
             Pair.update_one({"_id": pair_token['_id']},{"$set":{"marketcap": marketcap}})
         else:
@@ -164,39 +164,33 @@ def token_shillmaster(token):
 async def get_user_shillmaster(user):
     return_txt = "❗ There is not any shill yet for @"+user
     username = user.replace("@", "")
-    user_shills = Project.find({"username": {'$regex' : f'^{username}$', '$options' : 'i'}}).sort("created_at", -1).limit(5)
-    if user_shills != None:
+    project_cursor = Project.find({"username": {'$regex' : f'^{username}$', '$options' : 'i'}}).sort("created_at", -1).limit(5)
+    projects = list(project_cursor)
+    if len(projects) > 0:
         return_txt = "📊 Shillmaster stats for @"+user+" 📊\n\n"
         index = 1
-        for project in user_shills:
-            if index > 1:
-                    return_txt  += "=======================\n"
-            if project['status'] == "active":
-                return_txt += "💰 <a href='"+project['url']+"' >"+project['token_symbol']+"</a> Shared marketcap: $"+format_number_string(project['marketcap'])+"\n"
-                current_info = await current_status(project)
-                if current_info['is_liquidity']:
-                    if float(current_info['marketcap'])>float(project['ath_value']):
-                        Project.update_one({"_id": project['_id']}, {"$set":{"ath_value": current_info['marketcap']}})
-                    return_txt += f"👉 Currently: ${format_number_string(current_info['marketcap'])} ({str(round(current_info['percent'], 2))}x)\n"
-                    if float(current_info['marketcap'])< float(project['ath_value']):
+        for project in projects:
+            pair = Pair.find_one({"pair_address": project['pair_address']})
+            if pair != None:
+                if index > 1:
+                        return_txt  += "=======================\n"
+                if project['status'] == "active":
+                    return_txt += "💰 <a href='"+project['url']+"' >"+project['token_symbol']+"</a> Shared marketcap: $"+format_number_string(project['marketcap'])+"\n"
+                    return_txt += f"👉 Currently: ${format_number_string(pair['marketcap'])} ({get_percent(pair['marketcap'], project['marketcap'])}x)\n"
+                    if float(pair['marketcap'])< float(project['ath_value']):
                         return_txt += f"🏆 ATH: ${format_number_string(project['ath_value'])} ({get_percent(project['ath_value'], project['marketcap'])}x)\n"
-                else:
-                    is_warn = current_info['is_warn']
-                    if is_warn:
-                        add_warn(username, project['user_id'], project['chat_id'])
-                    return_txt += "👉 Currently: Liquidity removed\n"
-            
-            if project['status'] == "removed":
-                return_txt += f"💰 <a href='{project['url']}' >{project['token_symbol']}</a> Shared marketcap: ${format_number_string(project['marketcap'])}\n"
-                return_txt += "⚠️ Currently: Liquidity removed\n"
-            
-            if project['status'] == "no_liquidity":
-                return_txt += f"💰 <a href='{project['url']}' >{project['token_symbol']}</a> has no Liquidity\n"
-                return_txt += "⚠️ Got Warn with this token\n"
-            
-            if project['status'] == "honeypot":
-                return_txt += f"💰 <a href='{project['url']}' >{project['token_symbol']}</a> look like Honeypot\n"
-                return_txt += "⚠️ Got Warn with this token\n"
+                
+                if project['status'] == "removed":
+                    return_txt += f"💰 <a href='{project['url']}' >{project['token_symbol']}</a> Shared marketcap: ${format_number_string(project['marketcap'])}\n"
+                    return_txt += "⚠️ Currently: Liquidity removed\n"
+                
+                if project['status'] == "no_liquidity":
+                    return_txt += f"💰 <a href='{project['url']}' >{project['token_symbol']}</a> has no Liquidity\n"
+                    return_txt += "⚠️ Got Warn with this token\n"
+                
+                if project['status'] == "honeypot":
+                    return_txt += f"💰 <a href='{project['url']}' >{project['token_symbol']}</a> look like Honeypot\n"
+                    return_txt += "⚠️ Got Warn with this token\n"
             
             index += 1
 
@@ -204,20 +198,13 @@ async def get_user_shillmaster(user):
 
 async def current_status(project):
     try:
-        pairs = await get_token_pairs(project['token'])
-        filtered_pairs = []
-        if len(pairs) > 0:
-            filtered_pairs = [pair for pair in pairs if pair.url.lower() == project['url'].lower()]
-        
-        pair = None
-        if len(filtered_pairs)>0:
-            pair = max(filtered_pairs, key=attrgetter('liquidity.usd'))
+        pair = Pair.find_one({"pair_address": project['pair_address']})
 
         if pair == None:
             is_warn = user_rug_check(project, 'removed')
             return {"is_liquidity": False, "is_warn": is_warn}
         
-        if pair.liquidity.usd <= 100:
+        if pair['status'] <= 100:
             is_warn = user_rug_check(project, 'removed')
             return {"is_liquidity": False, "is_warn": is_warn}
         

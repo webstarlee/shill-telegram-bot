@@ -27,7 +27,7 @@ from helpers import  (
     is_admin,
     is_address
 )
-from controller.leaderboard import get_broadcasts, update_leaderboard_message_id, get_removed_pairs, get_leaderboard
+from controller.leaderboard import get_broadcasts, update_leaderboard_message_id, get_removed_pairs, get_leaderboard, token_update
 from controller.advertise import (
     new_advertise,
     check_available_time,
@@ -142,15 +142,16 @@ class ShillmasterTelegramBot:
         if len(removed_pairs)>0:
             for removed_pair_text in removed_pairs:
                 await asyncio.sleep(5)
-                await self.application.bot.send_message(chat_id=LEADERBOARD_ID, text=removed_pair_text, parse_mode='HTML')
+                # await self.application.bot.send_message(chat_id=LEADERBOARD_ID, text=removed_pair_text, parse_mode='HTML')
 
     async def leaderboard(self):
         while True:
-            await asyncio.sleep(150)
+            await token_update()
+            await asyncio.sleep(60)
             asyncio.create_task(self._leaderboard())
-            await asyncio.sleep(100)
+            await asyncio.sleep(60)
             asyncio.create_task(self._leaderboard_check_pair())
-            await asyncio.sleep(100)
+            await asyncio.sleep(300)
 
     async def show_leaderboard(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         leaderboard_text = get_leaderboard()
@@ -304,13 +305,12 @@ class ShillmasterTelegramBot:
         if setting == None:
             setting = Setting.find_one({"group_id": "master"})
 
-        if setting != None and len(receive_text) == 42:
-            if setting['shill_mode'] == False:
-                param = get_params(receive_text, "/")
-                param = param.replace("@", "")
-                param = param[:42]
-                asyncio.get_event_loop().create_task(self._shill(param, chat_id, user_id, username))
-                return None
+        if setting != None and setting['shill_mode'] == False:
+            param = get_params(receive_text, "/")
+            param = param.replace("@", "")
+            param = param[:42]
+            asyncio.get_event_loop().create_task(self._shill(param, chat_id, user_id, username))
+            return None
         return None
     
     async def check_leaderboard(self, update: Update, context: ContextTypes.DEFAULT_TYPE):

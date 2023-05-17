@@ -6,6 +6,7 @@ from models import Pair, Project, Warn, Setting, Leaderboard
 from config import LEADERBOARD_ID
 from helpers import make_pair_array, make_coins_ids, get_time_delta, get_percent, format_number_string, convert_am_time, convert_am_str
 from apis import get_pairs_by_pair_address, cryptocurrency_info_ids
+import asyncio
 
 def pair_marketcap_update(pair, marketcap):
     Pair.find_one_and_update({"_id": pair['_id']}, {"$set": {"marketcap": marketcap, "updated_at": datetime.utcnow()}})
@@ -81,35 +82,16 @@ def update_leaderboard_message_id(id, message_id):
 async def token_update():
     pairs_cursor = Pair.find({"status": "active"})
     pairs = list(pairs_cursor)
-
-    pairs_chunks = make_pair_array(pairs)
-
-    eth_pairs_chunks = pairs_chunks['eth']
-    bsc_pairs_chunks = pairs_chunks['bsc']
-    
-    all_pair_results = []
-    for eth_pair_chunk in eth_pairs_chunks:
-        results = await get_pairs_by_pair_address("ethereum", eth_pair_chunk)
-        for single_result in results:
-            all_pair_results.append(single_result)
-    
-    for bsc_pair_chunk in bsc_pairs_chunks:
-        results = await get_pairs_by_pair_address("bsc", bsc_pair_chunk)
-        for single_result in results:
-            all_pair_results.append(single_result)
-
+    index = 0
     for pair in pairs:
-        liquidities = [single_result for single_result in all_pair_results if single_result.pair_address.lower() == pair['pair_address'].lower()]
+        index += 1
+        logging.info(f"{index}: Checking: {pair['pair_address']}")
+        result = await get_pairs_by_pair_address(pair['chain_id'], [pair['pair_address']])
         exist_pair = None
-        if len(liquidities)>0:
-            exist_pair = liquidities[0]
-        
-        if exist_pair == None:
-            logging.info(f"Check again Dexpair: {pair['pair_address']}")
-            check_again = await get_pairs_by_pair_address(pair['chain_id'], [pair['pair_address']])
-            if len(check_again)>0:
-                exist_pair = check_again[0]
-        
+        if len(result)>0:
+            exist_pair = result[0]
+        await asyncio.sleep(0.2)
+
         if exist_pair != None and exist_pair.liquidity.usd>100:
             now_marketcap = exist_pair.fdv
             logging.info(f"updated token marketcap: {pair['token']} => {now_marketcap}")
@@ -119,8 +101,8 @@ async def token_update():
             logging.info(f"token Rugged: {pair['token']}")
             rug_check = threading.Thread(target=user_rug_check, args=(pair,))
             rug_check.start()
-
-    logging.info("Completed")
+    
+    logging.info("Token update Completed")
     return True
 
 def get_broadcasts():

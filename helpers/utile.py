@@ -165,7 +165,7 @@ async def pair_removed_check_again():
         check_again = await get_pairs_by_pair_address(pair['chain_id'], [pair['pair_address']])
         if len(check_again)>0:
             exist_pair = check_again[0]
-            if exist_pair != None and exist_pair.liquidity.usd>100:
+            if exist_pair.liquidity != None and exist_pair.liquidity.usd>100:
                 logging.info(f"Pair come back: {pair['_id']}")
                 Pair.find_one_and_update({"_id": pair['_id']}, {"$set": {"status": "active"}})
                 Project.update_many({"pair_address": pair['pair_address']}, {"$set": {"status": "active"}})
@@ -180,3 +180,14 @@ async def project_db_fix():
                 dex = result[0]
                 logging.info(f"Project marketcap fixed: {project['pair_address']}")
                 Project.find_one_and_update({"_id": project['_id']}, {"$set": {"marketcap": dex.fdv}})
+
+def pair_remove_duplicates():
+    pair_cursor = Pair.find()
+    pairs = list(pair_cursor)
+    pair_address_lists = []
+    for pair in pairs:
+        if pair['pair_address'] in pair_address_lists:
+            logging.info(f"Duplicated pair: {pair['_id']} => {pair['pair_address']}")
+            Pair.delete_one({'_id': pair['_id']})
+        else:
+            pair_address_lists.append(pair['pair_address'])

@@ -1,8 +1,10 @@
+import logging
 import random
 import string
 import time
 import maya
 import datetime
+import numpy as np
 from web3 import Web3
 from models import Ban, Warn, Project, Admin
 
@@ -43,44 +45,27 @@ def get_time_delta(time_one, time_two):
     delta_min = delta.seconds/60
     return delta_min
 
+def divide_chunks(l, n):
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
 def make_pair_array(pairs):
-    eth_pairs_array = []
-    bsc_pairs_array = []
+    eth_pairs_ids = []
+    bsc_pairs_ids = []
+    eth_count = 0
+    bsc_count = 0
     for pair in pairs:
         if pair['chain_id'] == "ethereum":
-            exist = [eth_pair for eth_pair in eth_pairs_array if eth_pair['token'].lower() == pair['token'].lower()]
-            if len(exist) == 0:
-                eth_pairs_array.append(pair)
+            eth_pairs_ids.append(pair['pair_address'])
+            eth_count += 1
         elif pair['chain_id'] == "bsc":
-            exist = [bsc_pair for bsc_pair in bsc_pairs_array if bsc_pair['token'].lower() == pair['token'].lower()]
-            if len(exist) == 0:
-                bsc_pairs_array.append(pair)
+            bsc_pairs_ids.append(pair['pair_address'])
+            bsc_count += 1
     
-    eth_pairs_chunks = []
-    eth_pair_addresses = []
-    eth_count = len(eth_pairs_array)
-    for index, eth_pair in enumerate(eth_pairs_array):
-        _index = index+1
-        if _index%15 == 0:
-            eth_pairs_chunks.append(eth_pair_addresses)
-            eth_pair_addresses = []
-        elif _index == eth_count:
-            eth_pairs_chunks.append(eth_pair_addresses)
-        else:
-            eth_pair_addresses.append(eth_pair['pair_address'])
-    
-    bsc_pairs_chunks = []
-    bsc_pair_addresses = []
-    bsc_count = len(bsc_pairs_array)
-    for index, bsc_pair in enumerate(bsc_pairs_array):
-        _index = index+1
-        if _index%15 == 0:
-            bsc_pairs_chunks.append(bsc_pair_addresses)
-            bsc_pair_addresses = []
-        elif _index == bsc_count:
-            bsc_pairs_chunks.append(bsc_pair_addresses)
-        else:
-            bsc_pair_addresses.append(bsc_pair['pair_address'])
+    logging.info(f"Eth pair is: {eth_count}")
+    logging.info(f"Bsc pair is: {bsc_count}")
+    eth_pairs_chunks = list(divide_chunks(eth_pairs_ids, 1))
+    bsc_pairs_chunks = list(divide_chunks(bsc_pairs_ids, 5))
 
     return {"eth": eth_pairs_chunks, "bsc": bsc_pairs_chunks}
 
@@ -113,8 +98,10 @@ def get_params(origin_text, command):
 def get_percent(first, second):
     first = float(first)
     second = float(second)
-    percent = first/second
-    return round(percent, 2)
+    if first > 0 and second > 0:
+        percent = first/second
+        return round(percent, 2)
+    return 0
 
 def format_number_string(number):
     number = float(number)
