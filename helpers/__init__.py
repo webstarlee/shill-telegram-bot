@@ -6,7 +6,7 @@ import maya
 import datetime
 import numpy as np
 from web3 import Web3
-from models import Ban, Warn, Project, Admin
+from models import Ban, Warn, Project, Admin, Pair
 
 def start_text():
     text = " ShillMasterBot Commands: \n\n"
@@ -230,3 +230,17 @@ def is_admin(user_id):
 
 def is_address(token):
     return Web3.is_address(token)
+
+def get_pair_detail(pair_address):
+    pair = Pair.find_one({"pair_address": {'$regex' : f'^{pair_address}$', '$options' : 'i'}})
+    text = ""
+    if pair != None:
+        text = f"👉 <a href='{pair['url']}'>{pair['symbol']}</a> marketcap: ${format_number_string(pair['marketcap'])}\n"
+    
+        return {"is_exist": True, "text": text}
+    else:
+        return {"is_exist": False, "text": text}
+
+def get_pair(pair_address):
+    pair = Pair.find_one({"pair_address": {'$regex' : f'^{pair_address}$', '$options' : 'i'}})
+    return pair

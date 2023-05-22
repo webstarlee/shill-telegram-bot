@@ -61,6 +61,10 @@ async def cryptocurrency_info(token):
 async def hoeny_check_api(token, pair):
     print("honey check start")
     target_token_address = Web3.to_checksum_address(token)
+    weth_token = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+    if token.lower() == weth_token.lower():
+        return {"is_honeypot": False, "reason": "weth"}
+    
     from_address = Web3.to_checksum_address("0xE556B7494C8809d66494CD23C48bff02e4391dCB")
     router_address = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
     if pair.labels != None and ("v3" in pair.labels or "V3" in pair.labels):

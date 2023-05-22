@@ -1,6 +1,7 @@
 
 import logging
 import telegram
+import threading
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, constants
 from telegram.ext import (
     ApplicationBuilder,
@@ -25,9 +26,11 @@ from helpers import  (
     convert_am_pm,
     format_number_string,
     is_admin,
-    is_address
+    is_address,
+    get_pair_detail,
+    get_pair
 )
-from controller.leaderboard import get_broadcasts, update_leaderboard_message_id, get_removed_pairs, get_leaderboard, token_update
+from controller.leaderboard import get_broadcasts, update_leaderboard_message_id, get_removed_pairs, get_leaderboard, token_update, user_rug_check
 from controller.advertise import (
     new_advertise,
     check_available_time,
@@ -142,7 +145,7 @@ class ShillmasterTelegramBot:
         if len(removed_pairs)>0:
             for removed_pair_text in removed_pairs:
                 await asyncio.sleep(5)
-                # await self.application.bot.send_message(chat_id=LEADERBOARD_ID, text=removed_pair_text, parse_mode='HTML')
+                await self.application.bot.send_message(chat_id=LEADERBOARD_ID, text=removed_pair_text, parse_mode='HTML')
 
     async def leaderboard(self):
         while True:
@@ -774,6 +777,44 @@ class ShillmasterTelegramBot:
 
         return None
 
+    async def show_pair_detail(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        chat_id = update.effective_chat.id
+        user_id = update.effective_user.id
+        iadmin = is_admin(user_id)
+        if iadmin:
+            receive_text = update.message.text
+            pair_address = get_params(receive_text, "/pair_detail")
+            detail = get_pair_detail(pair_address)
+            logging.info(pair_address)
+            if detail['is_exist']:
+                text = detail['text']
+                keyboard = [
+                    [InlineKeyboardButton(text="REMOVE", callback_data=f"/pair_remove_{pair_address}")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await self._send_message(chat_id, text, reply_markup)
+
+        return None
+
+    async def remove_pair(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        query = update.callback_query
+        receive_text = query.data
+        chat_id = update.effective_chat.id
+        user_id = update.effective_user.id
+        param = get_params(receive_text, "/pair_remove_")
+        iadmin = is_admin(user_id)
+        if iadmin:
+            logging.info("is admin")
+            pair = get_pair(param)
+            if pair != None:
+                logging.info("pair exist")
+                rug_check = threading.Thread(target=user_rug_check, args=(pair,))
+                rug_check.start()
+
+                return await update.callback_query.edit_message_text(text="Pair removed", parse_mode='HTML', disable_web_page_preview=True)
+
+        return None
+
     def run(self):
         self.application.add_handler(CommandHandler(["start", "help"], self.start))
         self.application.add_handler(CommandHandler("leaderboard", self.show_leaderboard))
@@ -789,6 +830,8 @@ class ShillmasterTelegramBot:
         self.application.add_handler(MessageHandler(filters.Regex("^0x(s)?"), self.show_token_usage))
         self.application.add_handler(MessageHandler(filters.Regex("^/unban@(s)?"), self.unban))
         self.application.add_handler(MessageHandler(filters.Regex("^/unban @(s)?"), self.unban))
+        self.application.add_handler(MessageHandler(filters.Regex("^/pair_detail0x?"), self.show_pair_detail))
+        self.application.add_handler(CallbackQueryHandler(self.remove_pair, pattern="^/pair_remove_?"))
         self.application.add_handler(CallbackQueryHandler(self.check_previos_shills, pattern="^/check_previous_shill?"))
         self.application.add_handler(CallbackQueryHandler(self.check_leaderboard, pattern="^/leaderboard?"))
         self.application.add_handler(CallbackQueryHandler(self.setting_shillmode, pattern="^/shill_mode_?"))
