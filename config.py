@@ -1,12 +1,11 @@
-from pymongo import MongoClient
 import os
 from pathlib import Path
 
 ROOT_PATH = Path(os.path.dirname(__file__))
 
-mongo_url = "mongodb://mongo:0vAcYlPN44ugKCNqFXNc@containers-us-west-203.railway.app:6725"
-mongo_client = MongoClient(mongo_url)
-mongo_db = mongo_client['shillmaster']
+# BOT_TOKEN="6090692320:AAEJTClH9MtkDB11WcdSnR1L2QX2HmAbw8Y"
+# LEADERBOARD_ID = "-1001622781625"
+# ALLBOARD_ID = "-1001625111898"
 
 BOT_TOKEN="6127801894:AAExOYxc_EHywwg664RmWGg2myVRThN9mL4"
 LEADERBOARD_ID = "-1001964784230"
@@ -46,4 +45,9 @@ dex_ids = [
     "shibaswap",
     "sushiswap",
     "pancakeswap"
+]
+
+chain_ids = [
+    "ethereum",
+    "bsc"
 ]

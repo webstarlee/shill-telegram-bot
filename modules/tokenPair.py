@@ -9,7 +9,6 @@ class TimestampDatetime:
     def __get_validators__(cls):
         yield lambda val: dt.datetime.utcfromtimestamp(val / 1000.0) if val is not None else val
 
-
 class BaseToken(BaseModel):
     address: str
     name: str
@@ -53,7 +52,6 @@ class Liquidity(BaseModel):
     usd: Optional[float] = None
     base: float
     quote: float
-
 
 class TokenPair(BaseModel):
     chain_id: str = Field(..., alias="chainId")
