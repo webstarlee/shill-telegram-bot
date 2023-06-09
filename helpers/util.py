@@ -167,3 +167,14 @@ def admins_database():
         admin = db.Admin.find_one({'user_id': int(single_data['user_id'])})
         if admin == None:
             db.Admin.insert_one(single_data)
+
+def all_project_to_active():
+    project_cursor = db.Project.find({})
+    projects = list(project_cursor)
+    index = 1
+    for project in projects:
+        db.Project.find_one_and_update({'_id': project['_id']}, {"$set": {"status": "active"}})
+        logging.info(f"Project Update {index} -> {project['token']}")
+        index += 1
+    
+    logging.info("Project Update Completed")

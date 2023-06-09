@@ -62,6 +62,7 @@ async def token_update():
             logging.info(f"token Rugged: {pair['chain']} -> {pair['token']}")
             rug_check = threading.Thread(target=user_rug_check, args=(pair,))
             rug_check.start()
+        await asyncio.sleep(0.3)
     
     logging.info("Token update Completed")
     return True

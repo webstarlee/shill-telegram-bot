@@ -171,11 +171,11 @@ class ShillmasterBot:
     async def leaderboard(self):
         while True:
             await token_update()
-            await asyncio.sleep(60)
+            await asyncio.sleep(100)
             await self._leaderboard()
-            await asyncio.sleep(60)
+            await asyncio.sleep(100)
             await self._leaderboard_check_remove()
-            await asyncio.sleep(60)
+            await asyncio.sleep(100)
     
     async def _task_schedule(self):
         tasks = db_task_select()
