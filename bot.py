@@ -170,8 +170,8 @@ class ShillmasterBot:
 
     async def leaderboard(self):
         while True:
-            # await token_update()
-            # await asyncio.sleep(60)
+            await token_update()
+            await asyncio.sleep(60)
             await self._leaderboard()
             await asyncio.sleep(60)
             await self._leaderboard_check_remove()
