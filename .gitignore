@@ -2,9 +2,9 @@
 __pycache__/
 api/__pycache__/
 config/__pycache__/
-controller/__pycache__/
-helper/__pycache__/
-model/__pycache__/
+controllers/__pycache__/
+helpers/__pycache__/
+modules/__pycache__/
 config/database.db
 *.py[cod]
 *$py.class

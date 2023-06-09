@@ -176,7 +176,7 @@ def broadcast_text(results):
         user = db.User.find_one({"user_id": result['user_id']})
         
         username = user['username'] if user else ""
-        result_text += f"#{str(index)}: @{username}\nTotal <b>{str(round(result['total_percent'], 2))}x</b>, AVG: <b>{str(round(result['average_percent'], 2))}x</b>.\n"
+        result_text += f"#{str(index)}: @{username}\nTotal <b>{str(round(float(result['total_percent']), 2))}x</b>, AVG: <b>{str(round(float(result['average_percent']), 2))}x</b>.\n"
         result_text += f"👉 <a href='{result['project']['pair_url']}'>{result['project']['symbol']}</a> Shared marketcap: ${format_price(result['project']['marketcap'])}\n"
         result_text += f"💰 Currently: ${format_price(current_marketcap)} ({round(float(current_marketcap)/float(result['project']['marketcap']), 2)}x)\n"
         if float(current_marketcap)<float(result['project']['ath']):

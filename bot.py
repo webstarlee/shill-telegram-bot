@@ -170,8 +170,8 @@ class ShillmasterBot:
 
     async def leaderboard(self):
         while True:
-            await token_update()
-            await asyncio.sleep(60)
+            # await token_update()
+            # await asyncio.sleep(60)
             await self._leaderboard()
             await asyncio.sleep(60)
             await self._leaderboard_check_remove()
@@ -262,7 +262,6 @@ class ShillmasterBot:
                 user_update = threading.Thread(target=db_user_update, args=(user_detail.user,))
                 user_update.start()
             await asyncio.sleep(2)
-            logging.info(index)
             index += 1
         logging.info("User update complete")
     
