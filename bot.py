@@ -78,9 +78,6 @@ class ShillmasterBot:
         return command
     
     def is_group_chat(self, update: Update) -> bool:
-        """
-        Checks if the message was sent from a group chat
-        """
         return update.effective_chat.type in [
             constants.ChatType.GROUP,
             constants.ChatType.SUPERGROUP
