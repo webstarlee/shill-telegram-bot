@@ -12,33 +12,32 @@ async def shillmaster(user_id, username, group_id, token):
     pairs = await get_pairs_by_token(token)
     
     if len(pairs) == 0:
-        return {"is_rug": True, "reason": "no_pool", "text": "There is no Liquidity for this token"}
+        return {"is_new": False, "is_rug": True, "reason": "no_pool", "text": "There is no Liquidity for this token"}
     
     chain_filtered_pairs = filter_by_chain(pairs)
     
     if len(chain_filtered_pairs) == 0:
-        return {"is_rug": True, "reason": "chain", "text": "Network not supported"}
+        return {"is_new": False, "is_rug": True, "reason": "chain", "text": "Network not supported"}
 
     dex_filtered_pairs = filter_by_dex(chain_filtered_pairs)
     
     if len(dex_filtered_pairs) == 0:
-        return {"is_rug": True, "reason": "dex", "text": "Dexrouter not supported"}
-    
+        return {"is_new": False, "is_rug": True, "reason": "dex", "text": "Dexrouter not supported"}
     
     v3_filtered_pairs = filter_by_v3(dex_filtered_pairs)
     
     if len(v3_filtered_pairs) == 0:
-        return {"is_rug": True, "reason": "v3", "text": "Uniswap V3 not supported"}
+        return {"is_new": False, "is_rug": True, "reason": "v3", "text": "Uniswap V3 not supported"}
     
     pair = max(v3_filtered_pairs, key=attrgetter('liquidity.usd'))
     
     if int(pair.liquidity.usd) < 100:
-        return {"is_rug": True, "reason": "low_liquidity", "text": "There is very low Liquidity for this token"}
+        return {"is_new": False, "is_rug": True, "reason": "low_liquidity", "text": "There is very low Liquidity for this token"}
     
     honey_result = check_honey_by_contract(token, pair)
     
     if honey_result['honeypot']:
-        return {"is_rug": True, "reason": "honeypot", "text": f"{pair.base_token.symbol} token look like Hoenypot!"}
+        return {"is_new": False, "is_rug": True, "reason": "honeypot", "text": f"{pair.base_token.symbol} token look like Hoenypot!"}
     
     pair_marketcap_update = threading.Thread(target=db_pair_marketcap_update, args=(pair,))
     pair_marketcap_update.start()

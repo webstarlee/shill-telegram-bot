@@ -15,6 +15,9 @@ def format_price(price):
 def percent(number1, number2):
     number1 = float(number1)
     number2 = float(number2)
+
+    if number2 == 0:
+        return "0"
     
     return str(round(float(number1/number2), 2))
 

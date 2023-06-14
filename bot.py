@@ -308,10 +308,16 @@ class ShillmasterBot:
         is_group = self.is_group_chat(update)
         text = response['text']
         if response['is_rug'] and response['reason'] == "honeypot":
-            user_warn = db_warn_update(user_id, chat_id)
-            text += "\n\n@"+username+" warned: "+str(user_warn['count'])+" Token Rugged ❌"
-            if user_warn.count > 1 and is_group:
-                asyncio.get_event_loop().create_task(self._block_user(user_warn))
+
+            if response['reason'] == "honeypot":
+                user_warn = db_warn_update(user_id, chat_id)
+                text += "\n\n@"+username+" warned: "+str(user_warn['count'])+" Token Rugged ❌"
+                if user_warn.count > 1 and is_group:
+                    asyncio.get_event_loop().create_task(self._block_user(user_warn))
+            
+            return await self._send_message(chat_id, text)
+            
+
         
         keyboard = [
             [InlineKeyboardButton(text="Leaderboard", url="https://t.me/shillmastersleaderboard/150"), InlineKeyboardButton(text="Check Previous Shills", callback_data=f"/check_previous_shill@{username}")],
